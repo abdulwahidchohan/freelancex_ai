@@ -1,4 +1,14 @@
+from core.base_agent import BaseAgent
+
 # Interfaces with Fiverr/Upwork
-class MarketplaceBotAgent:
+class MarketplaceBotAgent(BaseAgent):
+    def __init__(self):
+        super().__init__("MarketplaceBotAgent")
+
+    def run(self):
+        print(f'{self.agent_name} online.')
+        print(f"System Prompt loaded: {self.system_prompt[:50]}...") # For verification
+        self.sync()
+
     def sync(self):
         pass
