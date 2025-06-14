@@ -1,21 +1,23 @@
-import chainlit as cl
-
-# Custom UI controls
+# UI customization
 @cl.on_ui_update
-def update_ui():
-    cl.sidebar.title("FreelanceX.AI Control Panel")
-    cl.sidebar.button("Start Job Hunting", on_click=lambda: start_job_hunting())
-    cl.sidebar.button("Write Proposals", on_click=lambda: write_proposals())
-    cl.sidebar.button("View Logs", on_click=lambda: view_logs())
+async def update_ui():
+    # Update header settings
+    await cl.update_header(
+        title="FreelanceX AI Assistant",
+        logo="🤖",
+        favicon="🤖"
+    )
+    
+    # Configure chat settings
+    await cl.update_chat_settings(
+        dark_mode=True,
+        chat_position="center",
+        collapsed_sidebar=False
+    )
 
-def start_job_hunting():
-    # Implement job hunting logic here
-    pass
-
-def write_proposals():
-    # Implement proposal writing logic here
-    pass
-
-def view_logs():
-    # Implement log viewing logic here
-    pass
+    # Configure message settings
+    await cl.update_message_settings(
+        avatar_shape="circle",
+        enable_copy_button=True,
+        show_time=True
+    )

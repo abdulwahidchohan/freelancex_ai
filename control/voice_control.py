@@ -1,35 +1,34 @@
-import os
-import google.generativeai as genai
-import chainlit as cl
-from .automation_switch import is_system_active, is_safety_checks_enabled
-
-# Configure Gemini Flash API
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-pro')
-
-def process_voice(audio_path):
-    if not is_system_active() or not is_safety_checks_enabled():
-        return None
-
-    # Implement speech-to-text logic here
-    text = "Placeholder for speech-to-text conversion"
-
-    # Generate content using Gemini
-    response = model.generate_content(text)
-    return response.text
-
-def start_voice_control():
-    if is_system_active() and is_safety_checks_enabled():
-        # Implement logic to start voice control
-        pass
-
-def stop_voice_control():
-    if is_system_active() and is_safety_checks_enabled():
-        # Implement logic to stop voice control
-        pass
-
-def update_voice_control_ui():
-    with cl.sidebar():
-        cl.title("Voice Control")
-        cl.button("Start Voice Control", on_click=lambda: start_voice_control())
-        cl.button("Stop Voice Control", on_click=lambda: stop_voice_control())
+# Voice commands
+def process_voice_command(audio):
+    """
+    Process voice commands from audio input and convert to executable commands.
+    
+    Args:
+        audio: Audio data containing the voice command
+        
+    Returns:
+        tuple: (command_text, command_status, confidence_score)
+    """
+    try:
+        print(f"VoiceControl: Processing voice command from audio data: {audio}")
+        
+        # Add error checking for audio input
+        if not audio or len(audio) == 0:
+            raise ValueError("Empty audio input received")
+            
+        # In a real scenario, this would involve speech-to-text and command interpretation.
+        # Placeholder for speech-to-text conversion
+        command_text = "placeholder_text"
+        confidence_score = 0.95
+        
+        # Basic command validation
+        if len(command_text) > 0:
+            command_status = "success"
+        else:
+            command_status = "failed"
+            
+        return (command_text, command_status, confidence_score)
+        
+    except Exception as e:
+        print(f"Error processing voice command: {str(e)}")
+        return ("", "error", 0.0)

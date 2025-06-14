@@ -1,0 +1,54 @@
+# Core AI Agent Frameworks and Libraries
+openai-agents
+langchain>=0.1.0
+langchain-google-genai>=0.0.3
+crewai>=0.1.0
+anthropic>=0.5.0  # For Claude API integration
+instructor>=0.3.0  # Enhanced typing for LLMs
+
+# Backend and Data Management
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0  # For PostgreSQL
+PyYAML>=6.0.0  # For configuration files
+redis>=4.5.0  # For caching
+alembic>=1.11.0  # For database migrations
+
+# UI/Frontend
+chainlit
+streamlit  # Alternative UI framework
+
+# Utility and Data Processing
+pydantic>=2.0.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+pandas>=2.0.0  # For data manipulation
+numpy>=1.24.0  # For numerical operations
+python-dotenv>=1.0.0  # Environment management
+
+# Multimodal Capabilities
+pillow>=10.0.0
+opencv-python>=4.8.0
+transformers>=4.30.0  # For image processing models
+torch>=2.0.0  # For deep learning support
+
+# Voice Processing
+pyttsx3>=2.90
+SpeechRecognition>=3.10.0
+sounddevice>=0.4.0  # For audio I/O
+librosa>=0.10.0  # For audio processing
+
+# Testing and Quality Assurance
+pytest>=7.4.0
+pytest-cov>=4.1.0  # For coverage reports
+pytest-asyncio>=0.21.0  # For async tests
+
+# Development Tools
+ipdb>=0.13.0
+black>=23.7.0
+flake8>=6.1.0
+mypy>=1.4.0  # Type checking
+isort>=5.12.0  # Import sorting
+pre-commit>=3.3.0  # Git hooks

@@ -1,28 +1,44 @@
-import json
-import os
-import datetime
-
-# Logs all outcomes
-def log_feedback(agent_name, feedback):
-    log_file = f"logs/{agent_name}.log"
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
+# Logs agent outcomes
+def log_feedback(agent_name: str, outcome: str, log_file: str = "agent_feedback.log", log_level: str = "INFO") -> bool:
+    """
+    Logs feedback for an agent's outcome.
+    
+    Args:
+        agent_name (str): Name of the agent
+        outcome (str): Outcome/feedback to be logged
+        log_file (str): Path to the log file (default: agent_feedback.log)
+        log_level (str): Logging level (default: INFO)
+        
+    Returns:
+        bool: True if logging was successful, False otherwise
+    """
     try:
-        # Create logs directory if it doesn't exist
-        os.makedirs("logs", exist_ok=True)
-
-        # Append feedback to log file
-        with open(log_file, 'a') as f:
-            f.write(f"[{timestamp}] {feedback}\n")
-
-        # Analyze feedback for continuous improvement
-        analyze_feedback(agent_name, feedback)
-
-        print(f"Feedback logged for {agent_name}.")
+        # Add timestamp to log entry
+        timestamp = datetime.datetime.now().isoformat()
+        log_entry = f"[{timestamp}] [{log_level}] Agent: {agent_name} - Outcome: {outcome}"
+        
+        # Print to console
+        print(log_entry)
+        
+        # Write to log file
+        with open(log_file, 'a', encoding='utf-8') as f:
+            f.write(log_entry + '\n')
+            
+        # Could extend with additional logging methods:
+        # - Database logging
+        # - Cloud logging service
+        # - Metrics collection
+        
+        return True
     except Exception as e:
-        print(f"Error logging feedback for {agent_name}: {e}")
-
-def analyze_feedback(agent_name, feedback):
-    # Implement feedback analysis logic here
-    # This could involve sentiment analysis, keyword extraction, etc.
-    pass
+        error_msg = f"Error logging feedback: {str(e)}"
+        print(error_msg)
+        
+        # Log the error itself
+        try:
+            with open(log_file + '.error', 'a', encoding='utf-8') as f:
+                f.write(f"[{datetime.datetime.now().isoformat()}] {error_msg}\n")
+        except:
+            pass  # Suppress secondary errors
+            
+        return False

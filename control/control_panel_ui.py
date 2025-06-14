@@ -1,46 +1,48 @@
-import chainlit as cl
-from .automation_switch import toggle_system, is_system_active, toggle_safety_checks, is_safety_checks_enabled
-from .rules_engine import enforce_rules, update_rules_ui
-from .voice_control import start_voice_control, stop_voice_control, update_voice_control_ui
-
-# Chainlit control widgets
-def render_controls():
-    with cl.sidebar():
-        cl.title("FreelanceX.AI Master Control Panel")
-        cl.button("Start All Agents", on_click=lambda: start_all_agents())
-        cl.button("Stop All Agents", on_click=lambda: stop_all_agents())
-        cl.button("Pause Automation", on_click=lambda: pause_automation())
-        cl.button("Resume Automation", on_click=lambda: resume_automation())
-        cl.button("Toggle Safety Checks", on_click=lambda: toggle_safety_checks())
-        cl.button("Start Voice Control", on_click=lambda: start_voice_control())
-        cl.button("Stop Voice Control", on_click=lambda: stop_voice_control())
-        cl.button("View Logs", on_click=lambda: view_logs())
-
-        # Render rules UI
-        update_rules_ui()
-
-        # Render voice control UI
-        update_voice_control_ui()
-
-def start_all_agents():
-    if is_system_active() and is_safety_checks_enabled():
-        # Implement logic to start all agents
-        pass
-
-def stop_all_agents():
-    if is_system_active() and is_safety_checks_enabled():
-        # Implement logic to stop all agents
-        pass
-
-def pause_automation():
-    if is_system_active() and is_safety_checks_enabled():
-        toggle_system()
-
-def resume_automation():
-    if not is_system_active() and is_safety_checks_enabled():
-        toggle_system()
-
-def view_logs():
-    if is_system_active() and is_safety_checks_enabled():
-        # Implement logic to view logs
-        pass
+# User interface
+def render_controls(agents):
+    """
+    Renders the control panel UI for managing agents.
+    
+    Args:
+        agents (list): List of agent objects to display in the control panel
+        
+    Returns:
+        dict: Status of UI rendering with components information
+    """
+    try:
+        print(f"Initializing control panel UI for {len(agents)} agents...")
+        
+        # Validate input
+        if not agents:
+            return {
+                "status": "error",
+                "message": "No agents provided to render",
+                "components": []
+            }
+            
+        # Process each agent for UI rendering
+        ui_components = []
+        for agent in agents:
+            component = {
+                "id": id(agent),
+                "name": getattr(agent, "name", "Unnamed Agent"),
+                "status": getattr(agent, "status", "unknown"),
+                "controls": ["start", "stop", "pause", "resume"]
+            }
+            ui_components.append(component)
+            
+        print(f"Successfully generated UI components for agents: {agents}")
+        
+        return {
+            "status": "success",
+            "message": "UI rendered successfully",
+            "components": ui_components
+        }
+        
+    except Exception as e:
+        print(f"Error rendering control panel UI: {str(e)}")
+        return {
+            "status": "error",
+            "message": f"Failed to render UI: {str(e)}",
+            "components": []
+        }

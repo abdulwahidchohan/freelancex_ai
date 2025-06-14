@@ -1,3 +1,46 @@
 executive_agent:
-  enabled: true
-  retry: 3
+  default_agent_settings:
+    enabled: true
+    retry_attempts: 3
+    log_level: INFO
+    timeout: 300  # Timeout in seconds
+    error_handling: true
+    notification: true
+
+  agents:
+    job_hunter_agent:
+      search_interval: 3600  # Time in seconds
+      platforms: 
+        - upwork
+        - fiverr
+        - freelancer
+        - peopleperhour
+      enabled: true
+      keywords: []  # Job search keywords
+      job_types: ['fixed', 'hourly']
+      min_budget: 0
+      max_budget: 0  # 0 means no limit
+      
+    email_reply_agent:
+      enabled: true
+      max_retries: 5
+      reply_timeout: 1800  # Time in seconds
+      templates_path: "templates/"
+      auto_reply: true
+      priority_handling: true
+      
+    proposal_writer_agent:
+      enabled: true
+      max_retries: 3
+      templates_path: "templates/proposals/"
+      ai_enhancement: true
+      
+    analytics_agent:
+      enabled: true
+      tracking_metrics:
+        - success_rate
+        - response_time
+        - earnings
+      report_interval: 86400  # Daily in seconds
+      
+  # Add configurations for other agents as needed

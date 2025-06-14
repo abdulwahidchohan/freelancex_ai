@@ -1,1 +1,10 @@
-{}
+{
+  "users": {},
+  "conversations": {},
+  "lastUpdated": "",
+  "metadata": {
+    "version": "1.0",
+    "description": "User memory storage for FreelanceX AI",
+    "created": ""
+  }
+}
