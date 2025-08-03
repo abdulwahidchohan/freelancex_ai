@@ -1,0 +1,247 @@
+{
+  "app_name": "FreelanceX.AI",
+  "version": "1.0.0",
+  "description": "Empowering freelancers with cutting-edge AI tools for enhanced productivity, decision-making, and market adaptability",
+  "log_level": "INFO",
+  
+  "mission": "Enhance productivity, decision-making, and market adaptability",
+  "vision": "Become the global leader in AI-driven solutions for freelancers",
+  "values": ["Innovation", "Autonomy", "Collaboration", "Growth", "Impact"],
+  
+  "agents": {
+    "job_search": {
+      "enabled": true,
+      "update_frequency": 300,
+      "max_results_per_search": 50,
+      "alert_threshold": 5,
+      "supported_platforms": ["upwork", "freelancer", "fiverr", "linkedin", "toptal"],
+      "default_skills_matching_threshold": 0.3
+    },
+    "web_search": {
+      "enabled": true,
+      "cache_ttl": 3600,
+      "max_search_results": 20,
+      "research_depth_default": "medium",
+      "specialized_sources_enabled": true,
+      "daily_digest_enabled": true
+    },
+    "math": {
+      "enabled": true,
+      "precision": 6,
+      "currency_default": "USD",
+      "tax_jurisdiction_default": "US",
+      "financial_analysis_enabled": true,
+      "forecasting_enabled": true
+    }
+  },
+  
+  "daily_routines": {
+    "enabled": true,
+    "morning_briefing": "09:00",
+    "work_session_alerts": ["10:00", "14:00", "16:00"],
+    "end_of_day_summary": "18:00",
+    "timezone": "UTC",
+    "weekend_mode": false,
+    "holiday_awareness": true,
+    "customizable_schedules": true
+  },
+  
+  "user_interface": {
+    "theme": "professional",
+    "notifications": true,
+    "auto_save": true,
+    "language": "en",
+    "accessibility_features": true,
+    "dark_mode": false,
+    "compact_mode": false
+  },
+  
+  "privacy": {
+    "data_encryption": true,
+    "user_consent_required": true,
+    "data_retention_days": 365,
+    "anonymization_enabled": true,
+    "gdpr_compliance": true,
+    "ccpa_compliance": true,
+    "data_export_enabled": true,
+    "right_to_deletion": true
+  },
+  
+  "ethical_ai_governance": {
+    "transparency": {
+      "algorithm_explanations": true,
+      "decision_logging": true,
+      "audit_trails": true,
+      "user_feedback_tracking": true
+    },
+    "fairness": {
+      "bias_detection": true,
+      "diversity_promotion": true,
+      "equal_opportunity": true,
+      "algorithmic_fairness_checks": true
+    },
+    "accountability": {
+      "human_oversight": true,
+      "error_reporting": true,
+      "continuous_monitoring": true,
+      "regular_audits": true
+    },
+    "privacy_protection": {
+      "data_minimization": true,
+      "purpose_limitation": true,
+      "consent_management": true,
+      "secure_processing": true
+    },
+    "bias_mitigation": {
+      "training_data_diversity": true,
+      "bias_testing": true,
+      "fairness_metrics": true,
+      "inclusive_design": true
+    }
+  },
+  
+  "security": {
+    "api_rate_limiting": true,
+    "input_validation": true,
+    "output_sanitization": true,
+    "secure_communications": true,
+    "authentication_required": false,
+    "session_timeout_minutes": 60,
+    "max_failed_attempts": 3
+  },
+  
+  "performance": {
+    "max_concurrent_tasks": 10,
+    "agent_response_timeout": 30,
+    "cache_enabled": true,
+    "performance_monitoring": true,
+    "auto_optimization": true,
+    "resource_limits": {
+      "max_memory_mb": 512,
+      "max_cpu_percent": 80,
+      "max_disk_usage_mb": 1024
+    }
+  },
+  
+  "integrations": {
+    "external_apis": {
+      "google_search": {
+        "enabled": false,
+        "api_key": null,
+        "rate_limit": 100
+      },
+      "openai": {
+        "enabled": false,
+        "api_key": null,
+        "model": "gpt-4"
+      },
+      "anthropic": {
+        "enabled": false,
+        "api_key": null,
+        "model": "claude-3"
+      }
+    },
+    "freelance_platforms": {
+      "upwork": {
+        "api_enabled": false,
+        "oauth_token": null
+      },
+      "freelancer": {
+        "api_enabled": false,
+        "oauth_token": null
+      },
+      "fiverr": {
+        "api_enabled": false,
+        "oauth_token": null
+      }
+    },
+    "financial_services": {
+      "payment_tracking": false,
+      "tax_software_integration": false,
+      "accounting_software": null
+    }
+  },
+  
+  "features": {
+    "shadow_learning": {
+      "enabled": true,
+      "learning_rate": 0.1,
+      "feedback_incorporation": true,
+      "performance_tracking": true
+    },
+    "self_repair": {
+      "enabled": true,
+      "auto_recovery": true,
+      "diagnostic_frequency": "daily",
+      "repair_notifications": true
+    },
+    "cross_agent_negotiation": {
+      "enabled": true,
+      "conflict_resolution": true,
+      "priority_arbitration": true,
+      "collaboration_optimization": true
+    },
+    "marketplace_integration": {
+      "enabled": false,
+      "internal_marketplace": false,
+      "peer_to_peer_features": false,
+      "analytics_dashboard": true
+    }
+  },
+  
+  "data_storage": {
+    "database_type": "sqlite",
+    "backup_enabled": true,
+    "backup_frequency": "daily",
+    "compression_enabled": true,
+    "encryption_at_rest": true,
+    "data_validation": true
+  },
+  
+  "monitoring": {
+    "health_checks": true,
+    "performance_metrics": true,
+    "error_tracking": true,
+    "usage_analytics": true,
+    "user_satisfaction_tracking": true,
+    "system_alerts": true
+  },
+  
+  "development": {
+    "debug_mode": false,
+    "verbose_logging": false,
+    "test_mode": false,
+    "mock_external_apis": true,
+    "profiling_enabled": false
+  },
+  
+  "compliance": {
+    "audit_logging": true,
+    "regulatory_compliance": {
+      "gdpr": true,
+      "ccpa": true,
+      "sox": false,
+      "hipaa": false
+    },
+    "data_governance": {
+      "classification": true,
+      "lineage_tracking": true,
+      "quality_monitoring": true
+    }
+  },
+  
+  "localization": {
+    "supported_languages": ["en"],
+    "currency_support": ["USD", "EUR", "GBP", "CAD", "AUD"],
+    "timezone_support": true,
+    "regional_customization": true
+  },
+  
+  "experimental_features": {
+    "ai_pair_programming": false,
+    "voice_commands": false,
+    "predictive_analytics": false,
+    "blockchain_integration": false,
+    "quantum_computing_ready": false
+  }
+}
