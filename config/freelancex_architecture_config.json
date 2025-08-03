@@ -1,0 +1,527 @@
+{
+  "freelancex_ai": {
+    "version": "1.0.0",
+    "name": "FreelanceX.AI",
+    "description": "AI-powered freelance assistant with multi-agent architecture",
+    "mission": "Enhance productivity, decision-making, and market adaptability for freelancers",
+    "vision": "Become the global leader in AI-driven solutions for freelancers",
+    "values": ["Innovation", "Autonomy", "Collaboration", "Growth", "Impact"]
+  },
+  
+  "architecture": {
+    "layers": {
+      "user_interaction": {
+        "type": "Chainlit UI",
+        "description": "User-friendly frontend interface for seamless interaction",
+        "features": [
+          "Real-time chat interface",
+          "Notifications and alerts",
+          "Personalized dashboards",
+          "Voice and image recognition",
+          "Modern responsive design"
+        ],
+        "config": {
+          "theme": "modern",
+          "show_dashboard": true,
+          "show_agent_status": true,
+          "show_task_progress": true,
+          "enable_voice": false,
+          "enable_images": true
+        }
+      },
+      
+      "api_gateway": {
+        "type": "Centralized API Gateway",
+        "description": "Manages requests between frontend, backend agents, and external systems",
+        "features": [
+          "Request routing",
+          "Rate limiting",
+          "Authentication & security",
+          "Load balancing",
+          "Request/response transformation"
+        ],
+        "config": {
+          "host": "0.0.0.0",
+          "port": 8000,
+          "rate_limit": {
+            "requests_per_minute": 60,
+            "requests_per_hour": 1000,
+            "burst_limit": 10,
+            "window_size": 60
+          },
+          "security": {
+            "jwt_secret": "your-secret-key-here",
+            "token_expiry_hours": 24,
+            "cors_origins": ["*"],
+            "trusted_hosts": ["*"]
+          }
+        }
+      },
+      
+      "agent_coordination": {
+        "type": "Agent Coordination System",
+        "description": "Manages inter-agent communication and collaboration",
+        "features": [
+          "Task routing",
+          "Agent negotiation",
+          "Parallel execution",
+          "Pipeline processing",
+          "Resource management"
+        ],
+        "config": {
+          "max_concurrent_tasks": 10,
+          "task_timeout_seconds": 300,
+          "coordination_protocols": {
+            "sequential": "Agents work one after another",
+            "parallel": "Agents work simultaneously",
+            "pipeline": "Agents work in a chain",
+            "negotiation": "Agents negotiate for resources",
+            "consensus": "Agents reach consensus"
+          },
+          "routing_rules": {
+            "job_search": ["job_search_agent"],
+            "web_research": ["web_search_agent"],
+            "math_calculation": ["math_agent"],
+            "proposal_writing": ["proposal_writer_agent"],
+            "market_analysis": ["web_search_agent", "math_agent"],
+            "comprehensive_research": ["web_search_agent", "job_search_agent", "math_agent"],
+            "user_profile_analysis": ["user_clone_agent"],
+            "wellness_check": ["wellness_monitor_agent"],
+            "feedback_analysis": ["feedback_loop_agent"]
+          }
+        }
+      },
+      
+      "memory_layer": {
+        "type": "Memory Layer",
+        "description": "Handles user data storage, preferences, and long-term memory",
+        "features": [
+          "User profiles",
+          "Interaction history",
+          "Job history",
+          "Learning data",
+          "Caching layer"
+        ],
+        "config": {
+          "database": {
+            "type": "sqlite",
+            "path": "data/freelancex.db",
+            "backup_enabled": true,
+            "backup_interval_hours": 24
+          },
+          "redis": {
+            "url": "redis://localhost:6379",
+            "cache_ttl_seconds": 3600,
+            "session_ttl_seconds": 7200
+          },
+          "data_retention": {
+            "interactions_days": 90,
+            "job_history_days": 365,
+            "learning_data_days": 180,
+            "profiles_permanent": true
+          }
+        }
+      },
+      
+      "monitoring": {
+        "type": "Self-Repair and Monitoring System",
+        "description": "Continuously monitors system health and provides auto-repair",
+        "features": [
+          "System health monitoring",
+          "Agent health monitoring",
+          "Alert management",
+          "Auto-repair capabilities",
+          "Performance metrics"
+        ],
+        "config": {
+          "monitoring_interval_seconds": 30,
+          "heartbeat_interval_seconds": 60,
+          "response_timeout_seconds": 10,
+          "health_thresholds": {
+            "cpu_usage_warning": 70.0,
+            "cpu_usage_critical": 90.0,
+            "memory_usage_warning": 80.0,
+            "memory_usage_critical": 95.0,
+            "disk_usage_warning": 85.0,
+            "disk_usage_critical": 95.0,
+            "response_time_warning": 5.0,
+            "response_time_critical": 10.0,
+            "error_rate_warning": 0.05,
+            "error_rate_critical": 0.15
+          },
+          "auto_repair": {
+            "enabled": true,
+            "repair_strategies": {
+              "agent_unresponsive": "Restart agent",
+              "high_error_rate": "Clear caches and reset connections",
+              "memory_leak": "Trigger garbage collection",
+              "cpu_overload": "Throttle requests and scale down",
+              "disk_space": "Clean up old logs and temporary files"
+            }
+          }
+        }
+      }
+    },
+    
+    "agents": {
+      "job_search_agent": {
+        "description": "Scours external freelance platforms for job opportunities",
+        "capabilities": [
+          "Real-time job matching",
+          "Intelligent job filtering",
+          "Skill-based recommendations",
+          "Platform integration"
+        ],
+        "external_apis": [
+          "Upwork API",
+          "Fiverr API",
+          "Freelancer API",
+          "Guru API"
+        ],
+        "config": {
+          "search_interval_minutes": 30,
+          "max_jobs_per_search": 50,
+          "matching_threshold": 0.7,
+          "platforms": ["upwork", "fiverr", "freelancer", "guru"]
+        }
+      },
+      
+      "web_search_agent": {
+        "description": "Conducts deep web searches for industry news and trends",
+        "capabilities": [
+          "Web scraping",
+          "Trend analysis",
+          "Competitive intelligence",
+          "Market research"
+        ],
+        "external_apis": [
+          "Google Search API",
+          "Bing Search API",
+          "News API",
+          "Social media APIs"
+        ],
+        "config": {
+          "search_depth": "comprehensive",
+          "max_results_per_query": 20,
+          "content_filtering": true,
+          "rate_limiting": true
+        }
+      },
+      
+      "math_agent": {
+        "description": "Provides mathematical modeling for financial calculations",
+        "capabilities": [
+          "Rate calculations",
+          "Budget planning",
+          "Tax calculations",
+          "Project pricing",
+          "Financial projections"
+        ],
+        "libraries": [
+          "NumPy",
+          "Pandas",
+          "SymPy",
+          "SciPy"
+        ],
+        "config": {
+          "calculation_precision": 2,
+          "currency_support": ["USD", "EUR", "GBP"],
+          "tax_rates": {
+            "US": 0.15,
+            "EU": 0.20,
+            "UK": 0.20
+          }
+        }
+      },
+      
+      "proposal_writer_agent": {
+        "description": "Creates compelling proposals and pitches",
+        "capabilities": [
+          "Proposal generation",
+          "Content optimization",
+          "Tone adjustment",
+          "A/B testing"
+        ],
+        "config": {
+          "templates": ["standard", "creative", "technical", "consulting"],
+          "max_length": 2000,
+          "include_portfolio": true,
+          "personalization_level": "high"
+        }
+      },
+      
+      "user_clone_agent": {
+        "description": "Analyzes and learns from user behavior patterns",
+        "capabilities": [
+          "Behavior analysis",
+          "Preference learning",
+          "Recommendation engine",
+          "Personalization"
+        ],
+        "config": {
+          "learning_rate": 0.1,
+          "memory_window_days": 30,
+          "preference_weight": 0.8
+        }
+      },
+      
+      "wellness_monitor_agent": {
+        "description": "Monitors user wellness and work-life balance",
+        "capabilities": [
+          "Stress detection",
+          "Workload analysis",
+          "Balance recommendations",
+          "Wellness tracking"
+        ],
+        "config": {
+          "check_interval_hours": 4,
+          "stress_threshold": 0.7,
+          "recommendation_frequency": "daily"
+        }
+      },
+      
+      "feedback_loop_agent": {
+        "description": "Manages feedback collection and system improvement",
+        "capabilities": [
+          "Feedback collection",
+          "Sentiment analysis",
+          "Improvement suggestions",
+          "Quality metrics"
+        ],
+        "config": {
+          "feedback_prompt_frequency": "weekly",
+          "sentiment_threshold": 0.6,
+          "improvement_tracking": true
+        }
+      }
+    },
+    
+    "external_integrations": {
+      "job_platforms": {
+        "upwork": {
+          "api_url": "https://www.upwork.com/api/v2",
+          "rate_limit": "100 requests/hour",
+          "authentication": "OAuth2"
+        },
+        "fiverr": {
+          "api_url": "https://api.fiverr.com/v1",
+          "rate_limit": "1000 requests/day",
+          "authentication": "API Key"
+        },
+        "freelancer": {
+          "api_url": "https://www.freelancer.com/api",
+          "rate_limit": "100 requests/minute",
+          "authentication": "OAuth2"
+        }
+      },
+      
+      "research_tools": {
+        "google_search": {
+          "api_url": "https://www.googleapis.com/customsearch/v1",
+          "rate_limit": "100 requests/day",
+          "authentication": "API Key"
+        },
+        "news_api": {
+          "api_url": "https://newsapi.org/v2",
+          "rate_limit": "1000 requests/day",
+          "authentication": "API Key"
+        },
+        "social_media": {
+          "twitter": {
+            "api_url": "https://api.twitter.com/2",
+            "rate_limit": "300 requests/15min",
+            "authentication": "OAuth2"
+          },
+          "linkedin": {
+            "api_url": "https://api.linkedin.com/v2",
+            "rate_limit": "100 requests/day",
+            "authentication": "OAuth2"
+          }
+        }
+      },
+      
+      "payment_gateways": {
+        "stripe": {
+          "api_url": "https://api.stripe.com/v1",
+          "authentication": "Secret Key",
+          "webhook_support": true
+        },
+        "paypal": {
+          "api_url": "https://api.paypal.com/v1",
+          "authentication": "OAuth2",
+          "webhook_support": true
+        }
+      }
+    },
+    
+    "security": {
+      "authentication": {
+        "method": "JWT",
+        "token_expiry_hours": 24,
+        "refresh_token_expiry_days": 30,
+        "password_policy": {
+          "min_length": 8,
+          "require_uppercase": true,
+          "require_lowercase": true,
+          "require_numbers": true,
+          "require_special_chars": true
+        }
+      },
+      
+      "encryption": {
+        "algorithm": "AES-256",
+        "key_rotation_days": 90,
+        "data_at_rest": true,
+        "data_in_transit": true
+      },
+      
+      "privacy": {
+        "data_retention_policy": {
+          "user_data": "Until account deletion",
+          "interaction_logs": "90 days",
+          "analytics_data": "1 year",
+          "backup_data": "7 years"
+        },
+        "gdpr_compliance": true,
+        "data_anonymization": true,
+        "user_consent_management": true
+      },
+      
+      "audit": {
+        "logging": {
+          "level": "INFO",
+          "retention_days": 90,
+          "encryption": true
+        },
+        "audit_trail": {
+          "enabled": true,
+          "events": [
+            "user_login",
+            "data_access",
+            "agent_interaction",
+            "system_changes"
+          ]
+        }
+      }
+    },
+    
+    "performance": {
+      "scalability": {
+        "horizontal_scaling": true,
+        "load_balancing": true,
+        "auto_scaling": true,
+        "max_instances": 10
+      },
+      
+      "caching": {
+        "redis": {
+          "enabled": true,
+          "ttl_seconds": 3600,
+          "max_memory": "1GB"
+        },
+        "in_memory": {
+          "enabled": true,
+          "max_size": "100MB"
+        }
+      },
+      
+      "optimization": {
+        "database_optimization": true,
+        "query_optimization": true,
+        "connection_pooling": true,
+        "async_processing": true
+      }
+    },
+    
+    "deployment": {
+      "environment": {
+        "development": {
+          "debug": true,
+          "log_level": "DEBUG",
+          "auto_reload": true
+        },
+        "staging": {
+          "debug": false,
+          "log_level": "INFO",
+          "auto_reload": false
+        },
+        "production": {
+          "debug": false,
+          "log_level": "WARNING",
+          "auto_reload": false,
+          "ssl_enabled": true
+        }
+      },
+      
+      "containerization": {
+        "docker": {
+          "enabled": true,
+          "multi_stage_build": true,
+          "health_checks": true
+        },
+        "kubernetes": {
+          "enabled": true,
+          "auto_scaling": true,
+          "load_balancing": true
+        }
+      },
+      
+      "monitoring": {
+        "metrics": {
+          "prometheus": true,
+          "grafana": true,
+          "alerting": true
+        },
+        "logging": {
+          "elk_stack": true,
+          "log_aggregation": true,
+          "log_analysis": true
+        }
+      }
+    }
+  },
+  
+  "startup_sequence": [
+    "Initialize logging system",
+    "Load configuration",
+    "Setup database connections",
+    "Initialize memory layer",
+    "Start agent manager",
+    "Initialize agent coordinator",
+    "Start monitoring system",
+    "Initialize API gateway",
+    "Start Chainlit UI",
+    "Perform health checks",
+    "System ready"
+  ],
+  
+  "maintenance": {
+    "scheduled_tasks": {
+      "daily": [
+        "Database backup",
+        "Log rotation",
+        "Cache cleanup",
+        "Health check report"
+      ],
+      "weekly": [
+        "Performance analysis",
+        "Security audit",
+        "Data cleanup",
+        "System optimization"
+      ],
+      "monthly": [
+        "Full system backup",
+        "Comprehensive health check",
+        "Performance review",
+        "Update dependencies"
+      ]
+    },
+    
+    "backup": {
+      "strategy": "incremental",
+      "retention": "30 days",
+      "encryption": true,
+      "compression": true
+    }
+  }
+}
