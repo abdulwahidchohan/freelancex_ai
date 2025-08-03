@@ -1,0 +1,279 @@
+# FreelanceX.AI Agent Configuration
+# Author: Abdul Wahid Chohan
+# Mission: Define the complete agent ecosystem for freelancer assistance
+
+name: "FreelanceX.AI"
+description: "World-class AI assistant platform for freelancers"
+version: "1.0.0"
+
+# Executive Agent Configuration
+executive_agent:
+  name: "ExecutiveAgent"
+  description: "Central coordinator that routes tasks and manages agent interactions"
+  model: "gpt-4"
+  temperature: 0.3
+  max_tokens: 2000
+  capabilities:
+    - task_analysis
+    - agent_coordination
+    - priority_management
+    - context_understanding
+  tools:
+    - "task_router"
+    - "agent_dispatcher"
+    - "memory_access"
+
+# Specialized Agents
+agents:
+  job_search_agent:
+    name: "JobSearchAgent"
+    description: "Specialized agent for finding and analyzing freelance opportunities"
+    model: "gpt-4"
+    temperature: 0.2
+    max_tokens: 1500
+    capabilities:
+      - job_discovery
+      - skill_matching
+      - market_analysis
+      - application_tracking
+    tools:
+      - "upwork_api"
+      - "fiverr_api"
+      - "linkedin_api"
+      - "web_search"
+      - "job_analyzer"
+    enabled: true
+    priority: 1
+
+  proposal_writer_agent:
+    name: "ProposalWriterAgent"
+    description: "Creates compelling proposals and cover letters"
+    model: "gpt-4"
+    temperature: 0.7
+    max_tokens: 2000
+    capabilities:
+      - proposal_generation
+      - content_optimization
+      - client_research
+      - pricing_strategy
+    tools:
+      - "proposal_templates"
+      - "client_researcher"
+      - "pricing_calculator"
+      - "grammar_checker"
+    enabled: true
+    priority: 2
+
+  planning_agent:
+    name: "PlanningAgent"
+    description: "Manages project planning, scheduling, and task organization"
+    model: "gpt-4"
+    temperature: 0.4
+    max_tokens: 1500
+    capabilities:
+      - project_planning
+      - task_scheduling
+      - time_management
+      - milestone_tracking
+    tools:
+      - "calendar_integration"
+      - "task_manager"
+      - "time_tracker"
+      - "project_templates"
+    enabled: true
+    priority: 3
+
+  invoice_agent:
+    name: "InvoiceAgent"
+    description: "Handles invoicing, payment tracking, and financial management"
+    model: "gpt-4"
+    temperature: 0.1
+    max_tokens: 1000
+    capabilities:
+      - invoice_generation
+      - payment_tracking
+      - tax_calculations
+      - financial_reporting
+    tools:
+      - "invoice_generator"
+      - "payment_tracker"
+      - "tax_calculator"
+      - "financial_reporter"
+    enabled: true
+    priority: 4
+
+  client_agent:
+    name: "ClientAgent"
+    description: "Manages client communication and relationship building"
+    model: "gpt-4"
+    temperature: 0.6
+    max_tokens: 1500
+    capabilities:
+      - client_communication
+      - relationship_management
+      - feedback_processing
+      - follow_up_automation
+    tools:
+      - "email_manager"
+      - "client_database"
+      - "communication_templates"
+      - "feedback_analyzer"
+    enabled: true
+    priority: 5
+
+# Tool Definitions
+tools:
+  # API Integrations
+  upwork_api:
+    name: "UpworkAPI"
+    description: "Access Upwork job listings and client data"
+    type: "api"
+    config:
+      base_url: "https://www.upwork.com/api/v2"
+      rate_limit: 100
+      timeout: 30
+    required_keys:
+      - "UPWORK_API_KEY"
+      - "UPWORK_API_SECRET"
+
+  fiverr_api:
+    name: "FiverrAPI"
+    description: "Access Fiverr marketplace data"
+    type: "api"
+    config:
+      base_url: "https://api.fiverr.com"
+      rate_limit: 50
+      timeout: 30
+    required_keys:
+      - "FIVERR_API_KEY"
+
+  linkedin_api:
+    name: "LinkedInAPI"
+    description: "Access LinkedIn professional network data"
+    type: "api"
+    config:
+      base_url: "https://api.linkedin.com/v2"
+      rate_limit: 200
+      timeout: 30
+    required_keys:
+      - "LINKEDIN_CLIENT_ID"
+      - "LINKEDIN_CLIENT_SECRET"
+
+  # Web and Search Tools
+  web_search:
+    name: "WebSearch"
+    description: "Perform web searches for research and information gathering"
+    type: "tool"
+    config:
+      search_engine: "google"
+      max_results: 10
+      timeout: 15
+    required_keys:
+      - "GOOGLE_SEARCH_API_KEY"
+
+  # Content and Analysis Tools
+  job_analyzer:
+    name: "JobAnalyzer"
+    description: "Analyze job postings for relevance and opportunity"
+    type: "tool"
+    config:
+      analysis_depth: "comprehensive"
+      skill_matching_threshold: 0.7
+
+  proposal_templates:
+    name: "ProposalTemplates"
+    description: "Access and customize proposal templates"
+    type: "tool"
+    config:
+      template_library: "templates/proposals/"
+      customization_level: "high"
+
+  # Financial Tools
+  pricing_calculator:
+    name: "PricingCalculator"
+    description: "Calculate optimal pricing based on market data and skills"
+    type: "tool"
+    config:
+      currency: "USD"
+      market_data_source: "freelance_marketplace"
+
+  invoice_generator:
+    name: "InvoiceGenerator"
+    description: "Generate professional invoices with tax calculations"
+    type: "tool"
+    config:
+      template: "templates/invoices/"
+      tax_rates: "config/tax_rates.json"
+
+  # Communication Tools
+  email_manager:
+    name: "EmailManager"
+    description: "Manage email communications with clients"
+    type: "tool"
+    config:
+      provider: "gmail"
+      auto_respond: false
+    required_keys:
+      - "GMAIL_CLIENT_ID"
+      - "GMAIL_CLIENT_SECRET"
+
+# Memory Configuration
+memory:
+  type: "sqlite"
+  database_path: "data/freelancex_memory.db"
+  retention_days: 365
+  encryption: true
+  backup_enabled: true
+  backup_frequency: "daily"
+
+# System Configuration
+system:
+  log_level: "INFO"
+  max_concurrent_tasks: 10
+  task_timeout: 300
+  retry_attempts: 3
+  health_check_interval: 300
+  memory_cleanup_interval: 86400
+
+# User Profile (Abdul Wahid Chohan)
+user_profile:
+  name: "Abdul Wahid Chohan"
+  skills:
+    - "Python Development"
+    - "AI/ML Engineering"
+    - "Web Development"
+    - "Data Science"
+    - "System Architecture"
+  experience_level: "senior"
+  preferred_platforms:
+    - "Upwork"
+    - "Fiverr"
+    - "LinkedIn"
+  hourly_rate_range:
+    min: 50
+    max: 150
+  goals:
+    - "Build scalable AI systems"
+    - "Help other freelancers succeed"
+    - "Create innovative solutions"
+
+# Security and Privacy
+security:
+  data_encryption: true
+  api_key_rotation: true
+  audit_logging: true
+  gdpr_compliance: true
+  data_retention_policy: "user_controlled"
+
+# Performance Monitoring
+monitoring:
+  enabled: true
+  metrics:
+    - "response_time"
+    - "success_rate"
+    - "user_satisfaction"
+    - "system_health"
+  alerts:
+    - "high_error_rate"
+    - "slow_response_time"
+    - "system_overload" 
