@@ -21,8 +21,13 @@ from dataclasses import dataclass
 # Import FreelanceX.AI core components
 from core.agent_manager import AgentManager
 from core.base_agent import BaseAgent, AgentStatus
+from core.executive_agent import ExecutiveAgent
+from memory.sqlite_memory import MemoryManager
+from openai_agents import Agent, Session
+from openai import OpenAI
 
 # Import specialized agents
+from agents.proposal_writer_agent import ProposalWriterAgent
 from agents.job_search_agent import JobSearchAgent
 from agents.web_search_agent import WebSearchAgent  
 from agents.math_agent import MathAgent
@@ -74,6 +79,9 @@ class FreelanceXAI:
         
         # Initialize core components
         self.agent_manager = AgentManager()
+        self.memory_manager = MemoryManager()
+        self.executive_agent = ExecutiveAgent()
+        self.openai_client = OpenAI()
         self.user_profile: Optional[UserProfile] = None
         self.daily_routine: Optional[DailyRoutine] = None
         

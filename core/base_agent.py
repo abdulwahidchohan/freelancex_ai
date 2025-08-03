@@ -6,6 +6,10 @@ from datetime import datetime
 from abc import ABC, abstractmethod
 from enum import Enum
 
+from openai_agents import Agent, Session
+from openai import OpenAI
+from pydantic import BaseModel
+
 class AgentStatus(Enum):
     IDLE = "idle"
     BUSY = "busy"
@@ -26,6 +30,9 @@ class BaseAgent(ABC):
         self.system_prompt = self._load_system_prompt()
         self.logger = logging.getLogger(f"FreelanceX.{agent_name}")
         
+        # Initialize OpenAI Agent SDK
+        self._init_openai_agent()
+        
         # Core FreelanceX.AI attributes
         self.ethical_guidelines = self._load_ethical_guidelines()
         self.memory_store = {}
@@ -41,8 +48,32 @@ class BaseAgent(ABC):
         self.message_queue = asyncio.Queue()
         self.agent_registry = None  # Will be set by AgentManager
         
-        self.logger.info(f"FreelanceX.AI Agent '{agent_name}' initialized")
+        # Session management for OpenAI Agent SDK
+        self.sessions: Dict[str, Session] = {}
+        
+        self.logger.info(f"FreelanceX.AI Agent '{agent_name}' initialized with OpenAI Agent SDK")
 
+    def _init_openai_agent(self):
+        """Initialize OpenAI Agent SDK agent"""
+        try:
+            import os
+            api_key = os.getenv('OPENAI_API_KEY')
+            if not api_key:
+                self.logger.warning("OPENAI_API_KEY not set, using fallback mode")
+                self.openai_agent = None
+                return
+                
+            self.openai_agent = Agent(
+                name=f"FreelanceX {self.agent_name}",
+                instructions=self.system_prompt,
+                model="gpt-4o-mini",
+                tools=self._get_agent_tools()
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Failed to initialize OpenAI Agent SDK: {str(e)}")
+            self.openai_agent = None
+    
     def _load_system_prompt(self) -> str:
         """Load system prompt with FreelanceX.AI context"""
         try:
@@ -51,8 +82,8 @@ class BaseAgent(ABC):
                 base_prompt = config.get('SYSTEM_PROMPT', '')
                 
             # Add FreelanceX.AI specific context
-            freelancex_context = """
-            You are part of FreelanceX.AI, empowering freelancers with cutting-edge AI tools.
+            freelancex_context = f"""
+            You are the {self.agent_name} agent in FreelanceX.AI, empowering freelancers with cutting-edge AI tools.
             Mission: Enhance productivity, decision-making, and market adaptability.
             Values: Innovation, autonomy, collaboration, growth, and impact.
             
@@ -64,11 +95,15 @@ class BaseAgent(ABC):
             
         except FileNotFoundError:
             self.logger.error("system_prompt.json not found in config directory")
-            return ""
+            return f"You are the {self.agent_name} agent in FreelanceX.AI."
         except json.JSONDecodeError:
             self.logger.error("Could not decode system_prompt.json. Check JSON format")
-            return ""
+            return f"You are the {self.agent_name} agent in FreelanceX.AI."
 
+    def _get_agent_tools(self) -> List:
+        """Get tools for this agent - to be overridden by subclasses"""
+        return []
+    
     def _load_ethical_guidelines(self) -> Dict[str, Any]:
         """Load FreelanceX.AI ethical guidelines"""
         return {
@@ -80,6 +115,16 @@ class BaseAgent(ABC):
             "data_encryption": True,
             "anonymization": True
         }
+    
+    def get_or_create_session(self, user_id: str) -> Optional[Session]:
+        """Get or create a session for a user"""
+        if not self.openai_agent:
+            return None
+            
+        if user_id not in self.sessions:
+            self.sessions[user_id] = Session(agent=self.openai_agent)
+            self.logger.info(f"Created new session for user: {user_id}")
+        return self.sessions[user_id]
 
     async def send_message(self, target_agent: str, message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Send message to another agent through centralized API"""
@@ -269,4 +314,4 @@ class BaseAgent(ABC):
         self.logger.info(f"Initiating self-repair: {diagnosis}")
         # Self-repair logic would go here
         # For now, just reset status
-        self.status = AgentStatus.IDLE 
+        self.status = AgentStatus.IDLE

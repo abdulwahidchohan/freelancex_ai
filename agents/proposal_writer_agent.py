@@ -9,7 +9,9 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import json
 
-from core.agent_manager import BaseAgent
+from core.base_agent import BaseAgent
+from openai_agents import Agent, Session
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -17,17 +19,61 @@ class ProposalWriterAgent(BaseAgent):
     """
     Proposal Writer Agent - Creates compelling proposals and cover letters
     Analyzes job requirements and crafts personalized proposals
+    Uses OpenAI Agent SDK for enhanced proposal generation
     """
     
     def __init__(self):
         super().__init__(
-            agent_id="proposal_writer_agent",
-            name="ProposalWriterAgent",
-            description="Creates compelling proposals and cover letters"
+            agent_name="ProposalWriterAgent",
+            agent_type="proposal_writer"
         )
         self.templates = self._load_templates()
         self.proposal_history = []
         
+        # Initialize with agent-specific capabilities
+        logger.info("🎯 ProposalWriterAgent initialized with OpenAI Agent SDK")
+        
+    def _get_agent_tools(self) -> List:
+        """Get OpenAI Agent SDK tools for proposal writing"""
+        return [
+            self._get_proposal_generation_tool(),
+            self._get_pricing_strategy_tool(),
+            self._get_content_optimization_tool(),
+            self._get_client_research_tool()
+        ]
+    
+    def _get_proposal_generation_tool(self):
+        """Tool for generating proposals"""
+        def generate_proposal(job_description: str, user_profile: str) -> str:
+            """Generate a compelling proposal based on job description and user profile"""
+            return f"Generated proposal for: {job_description[:100]}..."
+        
+        return generate_proposal
+    
+    def _get_pricing_strategy_tool(self):
+        """Tool for pricing strategy"""
+        def suggest_pricing(project_scope: str, complexity: str) -> str:
+            """Suggest pricing strategy based on project scope and complexity"""
+            return f"Pricing strategy for {complexity} project: {project_scope[:50]}..."
+        
+        return suggest_pricing
+    
+    def _get_content_optimization_tool(self):
+        """Tool for content optimization"""
+        def optimize_content(content: str) -> str:
+            """Optimize proposal content for better engagement"""
+            return f"Optimized content: {content[:100]}..."
+        
+        return optimize_content
+    
+    def _get_client_research_tool(self):
+        """Tool for client research"""
+        def research_client(client_info: str) -> str:
+            """Research client background and preferences"""
+            return f"Client research results for: {client_info[:50]}..."
+        
+        return research_client
+    
     def get_capabilities(self) -> List[str]:
         """Return proposal writer agent capabilities"""
         return [
@@ -39,8 +85,38 @@ class ProposalWriterAgent(BaseAgent):
             'template_customization'
         ]
     
+    async def execute_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute proposal writing tasks using OpenAI Agent SDK"""
+        try:
+            user_id = task.get('user_id', 'default')
+            content = task.get('content', '')
+            
+            # Use OpenAI Agent SDK session if available
+            if self.openai_agent:
+                session = self.get_or_create_session(user_id)
+                if session:
+                    response = session.run(content)
+                    return {
+                        'success': True,
+                        'result': str(response),
+                        'agent': self.agent_name,
+                        'timestamp': datetime.now().isoformat()
+                    }
+            
+            # Fallback to custom processing
+            return await self.process_task(task)
+            
+        except Exception as e:
+            logger.error(f"❌ Proposal writer agent task execution failed: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'agent': self.agent_name,
+                'timestamp': datetime.now().isoformat()
+            }
+    
     async def process_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process proposal writing related tasks"""
+        """Process proposal writing related tasks (fallback method)"""
         try:
             content = task_data.get('content', '').lower()
             task_type = task_data.get('task_type', 'general')

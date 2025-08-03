@@ -11,6 +11,9 @@ from dataclasses import dataclass
 from datetime import datetime
 import uuid
 
+from openai_agents import Agent, Session
+from openai import OpenAI
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -24,6 +27,7 @@ class AgentStatus:
     error_count: int
     avg_response_time: float
 
+# BaseAgent is now imported from base_agent.py - keeping this for backward compatibility
 class BaseAgent(ABC):
     """
     Base class for all FreelanceX.AI agents
@@ -96,17 +100,24 @@ class BaseAgent(ABC):
 
 class AgentManager:
     """
-    Central manager for all FreelanceX.AI agents
+    Central manager for all FreelanceX.AI agents with OpenAI Agent SDK integration
     Handles registration, lifecycle management, and coordination
+    Integrates with OpenAI Agent SDK for enhanced agent capabilities
     """
     
-    def __init__(self):
+    def __init__(self, memory_manager=None):
         self.agents: Dict[str, BaseAgent] = {}
         self.agent_status: Dict[str, AgentStatus] = {}
         self.task_queue = asyncio.Queue()
         self.running = False
         self.max_concurrent_tasks = 10
         self.active_tasks = 0
+        
+        # OpenAI Agent SDK integration
+        self.memory_manager = memory_manager
+        self.session_registry: Dict[str, Dict[str, Session]] = {}  # user_id -> agent_name -> session
+        
+        logger.info("🎯 AgentManager initialized with OpenAI Agent SDK integration")
         
     async def register_agent(self, agent: BaseAgent) -> bool:
         """Register a new agent"""

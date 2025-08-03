@@ -13,12 +13,16 @@ from pathlib import Path
 import aiosqlite
 import hashlib
 
+from openai_agents import Session
+from openai import OpenAI
+
 logger = logging.getLogger(__name__)
 
 class MemoryManager:
     """
-    SQLite-based memory manager for FreelanceX.AI
+    SQLite-based memory manager for FreelanceX.AI with OpenAI Agent SDK integration
     Stores user interactions, context, and learning data
+    Integrates with OpenAI Agent SDK sessions for enhanced memory management
     """
     
     def __init__(self, db_path: str = "data/freelancex_memory.db"):
@@ -26,12 +30,16 @@ class MemoryManager:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.connection = None
         
+        # OpenAI Agent SDK session storage
+        self.active_sessions: Dict[str, Session] = {}
+        self.session_metadata: Dict[str, Dict[str, Any]] = {}
+        
     async def initialize(self):
         """Initialize the memory system and create tables"""
         try:
             self.connection = await aiosqlite.connect(self.db_path)
             await self._create_tables()
-            logger.info("✅ Memory system initialized")
+            logger.info("✅ Memory system initialized with OpenAI Agent SDK integration")
         except Exception as e:
             logger.error(f"❌ Memory initialization failed: {str(e)}")
             raise
@@ -93,11 +101,26 @@ class MemoryManager:
                 )
             """)
             
+            # Sessions table for OpenAI Agent SDK integration
+            await cursor.execute("""
+                CREATE TABLE IF NOT EXISTS agent_sessions (
+                    session_id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    agent_name TEXT NOT NULL,
+                    session_data TEXT,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    last_accessed TEXT DEFAULT CURRENT_TIMESTAMP,
+                    is_active BOOLEAN DEFAULT TRUE
+                )
+            """)
+            
             # Create indexes for better performance
             await cursor.execute("CREATE INDEX IF NOT EXISTS idx_interactions_user_id ON interactions(user_id)")
             await cursor.execute("CREATE INDEX IF NOT EXISTS idx_interactions_timestamp ON interactions(timestamp)")
             await cursor.execute("CREATE INDEX IF NOT EXISTS idx_task_history_user_id ON task_history(user_id)")
             await cursor.execute("CREATE INDEX IF NOT EXISTS idx_learning_data_user_id ON learning_data(user_id)")
+            await cursor.execute("CREATE INDEX IF NOT EXISTS idx_agent_sessions_user_id ON agent_sessions(user_id)")
+            await cursor.execute("CREATE INDEX IF NOT EXISTS idx_agent_sessions_agent_name ON agent_sessions(agent_name)")
             
         await self.connection.commit()
         logger.info("📊 Database tables created successfully")
@@ -407,6 +430,113 @@ class MemoryManager:
             logger.error(f"❌ Failed to get learning patterns: {str(e)}")
             return []
     
+    async def store_session(self, session_id: str, user_id: str, agent_name: str, session: Session):
+        """Store an OpenAI Agent SDK session"""
+        try:
+            # Store session in memory
+            self.active_sessions[session_id] = session
+            self.session_metadata[session_id] = {
+                'user_id': user_id,
+                'agent_name': agent_name,
+                'created_at': datetime.now().isoformat(),
+                'last_accessed': datetime.now().isoformat()
+            }
+            
+            # Store session metadata in database
+            session_data = json.dumps({
+                'messages_count': len(session.messages) if hasattr(session, 'messages') else 0,
+                'last_message': session.messages[-1].content if hasattr(session, 'messages') and session.messages else None
+            })
+            
+            async with self.connection.cursor() as cursor:
+                await cursor.execute("""
+                    INSERT OR REPLACE INTO agent_sessions 
+                    (session_id, user_id, agent_name, session_data, last_accessed)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (session_id, user_id, agent_name, session_data, datetime.now().isoformat()))
+            
+            await self.connection.commit()
+            logger.debug(f"💾 Stored session {session_id} for user {user_id}")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to store session: {str(e)}")
+    
+    async def get_session(self, session_id: str) -> Optional[Session]:
+        """Retrieve an OpenAI Agent SDK session"""
+        try:
+            if session_id in self.active_sessions:
+                # Update last accessed time
+                self.session_metadata[session_id]['last_accessed'] = datetime.now().isoformat()
+                
+                async with self.connection.cursor() as cursor:
+                    await cursor.execute("""
+                        UPDATE agent_sessions 
+                        SET last_accessed = ?
+                        WHERE session_id = ?
+                    """, (datetime.now().isoformat(), session_id))
+                
+                await self.connection.commit()
+                return self.active_sessions[session_id]
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to get session: {str(e)}")
+            return None
+    
+    async def get_user_sessions(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get all sessions for a user"""
+        try:
+            async with self.connection.cursor() as cursor:
+                await cursor.execute("""
+                    SELECT session_id, agent_name, session_data, created_at, last_accessed, is_active
+                    FROM agent_sessions
+                    WHERE user_id = ? AND is_active = TRUE
+                    ORDER BY last_accessed DESC
+                """, (user_id,))
+                
+                rows = await cursor.fetchall()
+                
+                sessions = []
+                for row in rows:
+                    sessions.append({
+                        'session_id': row[0],
+                        'agent_name': row[1],
+                        'session_data': json.loads(row[2]) if row[2] else {},
+                        'created_at': row[3],
+                        'last_accessed': row[4],
+                        'is_active': bool(row[5])
+                    })
+                
+                return sessions
+                
+        except Exception as e:
+            logger.error(f"❌ Failed to get user sessions: {str(e)}")
+            return []
+    
+    async def close_session(self, session_id: str):
+        """Close and remove a session"""
+        try:
+            # Remove from memory
+            if session_id in self.active_sessions:
+                del self.active_sessions[session_id]
+            if session_id in self.session_metadata:
+                del self.session_metadata[session_id]
+            
+            # Mark as inactive in database
+            async with self.connection.cursor() as cursor:
+                await cursor.execute("""
+                    UPDATE agent_sessions 
+                    SET is_active = FALSE
+                    WHERE session_id = ?
+                """, (session_id,))
+            
+            await self.connection.commit()
+            logger.debug(f"🔒 Closed session {session_id}")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to close session: {str(e)}")
+    
     async def cleanup_old_data(self, days: int = 365):
         """Clean up old data to prevent database bloat"""
         try:
@@ -430,6 +560,12 @@ class MemoryManager:
                     DELETE FROM learning_data
                     WHERE usage_count < 3 AND updated_at < ?
                 """, (cutoff_date,))
+                
+                # Clean up old inactive sessions
+                await cursor.execute("""
+                    DELETE FROM agent_sessions
+                    WHERE is_active = FALSE AND last_accessed < ?
+                """, (cutoff_date,))
             
             await self.connection.commit()
             logger.info(f"🧹 Cleaned up data older than {days} days")
@@ -441,4 +577,4 @@ class MemoryManager:
         """Close the database connection"""
         if self.connection:
             await self.connection.close()
-            logger.info("🔒 Memory system connection closed") 
+            logger.info("🔒 Memory system connection closed")

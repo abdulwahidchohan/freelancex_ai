@@ -1,9 +1,7 @@
 # Core AI Agent Frameworks and Libraries
-openai-agents
-langchain>=0.1.0
-langchain-google-genai>=0.0.3
-crewai>=0.1.0
-anthropic>=0.5.0  # For Claude API integration
+openai-agents>=0.1.0
+openai>=1.0.0
+pydantic>=2.0.0
 instructor>=0.3.0  # Enhanced typing for LLMs
 
 # Backend and Data Management
@@ -60,7 +58,7 @@ prometheus-client>=0.17.0  # For Prometheus metrics
 grafana-api>=1.0.0  # For Grafana integration
 
 # Email and Notifications
-smtplib  # Built-in email support
+# smtplib is a built-in module and doesn't need to be installed
 sendgrid>=6.10.0  # For SendGrid email service
 slack-sdk>=3.21.0  # For Slack notifications
 twilio>=8.5.0  # For SMS notifications
@@ -76,12 +74,13 @@ schedule>=1.2.0  # For daily routines scheduling
 aiofiles>=23.0.0  # Async file operations
 watchdog>=3.0.0  # File system monitoring
 cryptography>=41.0.0  # Data encryption
-secrets  # Built-in secrets generation
+psutil>=5.9.0  # System monitoring (moved from Monitoring section to ensure it's installed)
+# secrets is a built-in module and doesn't need to be installed
 
 # Job Board API Integrations
 linkedin-api>=2.0.0  # For LinkedIn API
-upwork-python>=0.1.0  # For Upwork API (if available)
-freelancer-sdk>=1.0.0  # For Freelancer.com API (if available)
+# upwork-python>=0.1.0  # For Upwork API (commented out as package not found)
+# freelancer-sdk>=1.0.0  # For Freelancer.com API (commented out as package may not be available)
 
 # Financial and Mathematical Libraries
 sympy>=1.12.0  # For symbolic mathematics

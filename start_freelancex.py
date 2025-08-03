@@ -21,13 +21,17 @@ sys.path.append(str(project_root))
 # Import FreelanceX.AI components
 from config.settings import get_config, FreelanceXConfig
 from core.agent_manager import AgentManager
+from core.executive_agent import ExecutiveAgent
+from memory.sqlite_memory import MemoryManager
 from backend.database import DatabaseManager
 from backend.api_gateway import APIGateway
 from backend.monitoring_system import get_monitoring_system
 from backend.external_integrations import get_integrations_manager
-from chainlit_app.main import executive_agent
+from openai_agents import Agent, Session
+from openai import OpenAI
 
 # Import specialized agents
+from agents.proposal_writer_agent import ProposalWriterAgent
 from agents.job_search_agent import JobSearchAgent
 from agents.web_search_agent import WebSearchAgent
 from agents.math_agent import MathAgent
@@ -64,11 +68,16 @@ class FreelanceXOrchestrator:
         self.api_gateway = None
         self.monitoring_system = None
         self.integrations_manager = None
+        self.memory_manager = None
+        self.executive_agent = None
+        
+        # OpenAI Agent SDK components
+        self.openai_client = None
         
         # Agents
         self.agents = {}
         
-        logger.info("FreelanceX.AI Orchestrator initialized")
+        logger.info("FreelanceX.AI Orchestrator initialized with OpenAI Agent SDK")
     
     async def initialize_database(self):
         """Initialize database connection and schema"""
@@ -98,14 +107,27 @@ class FreelanceXOrchestrator:
             raise
     
     async def initialize_agents(self):
-        """Initialize and register all agents"""
-        logger.info("Initializing agents...")
+        """Initialize and register all agents with OpenAI Agent SDK"""
+        logger.info("Initializing agents with OpenAI Agent SDK...")
         
         try:
-            # Initialize agent manager
+            # Initialize OpenAI client
+            self.openai_client = OpenAI()
+            
+            # Initialize memory manager
+            self.memory_manager = MemoryManager()
+            await self.memory_manager.initialize()
+            
+            # Initialize agent manager with OpenAI Agent SDK support
             self.agent_manager = AgentManager()
+            self.agent_manager.memory_manager = self.memory_manager
+            self.agent_manager.session_registry = {}
+            
+            # Initialize executive agent
+            self.executive_agent = ExecutiveAgent()
             
             # Initialize specialized agents
+            self.agents["proposal_writer"] = ProposalWriterAgent()
             self.agents["job_search"] = JobSearchAgent()
             self.agents["web_search"] = WebSearchAgent()
             self.agents["math"] = MathAgent()
@@ -120,8 +142,10 @@ class FreelanceXOrchestrator:
             
             self.services["agent_manager"] = self.agent_manager
             self.services["agents"] = self.agents
+            self.services["memory_manager"] = self.memory_manager
+            self.services["executive_agent"] = self.executive_agent
             
-            logger.info(f"Initialized {len(self.agents)} agents successfully")
+            logger.info(f"Initialized {len(self.agents)} agents successfully with OpenAI Agent SDK")
             
         except Exception as e:
             logger.error(f"Agent initialization failed: {str(e)}")
