@@ -45,6 +45,13 @@ pytest>=7.4.0
 pytest-cov>=4.1.0  # For coverage reports
 pytest-asyncio>=0.21.0  # For async tests
 
+# FreelanceX.AI Specific Dependencies
+schedule>=1.2.0  # For daily routines scheduling
+aiofiles>=23.0.0  # Async file operations
+watchdog>=3.0.0  # File system monitoring
+cryptography>=41.0.0  # Data encryption
+psutil>=5.9.0  # System monitoring
+
 # Development Tools
 ipdb>=0.13.0
 black>=23.7.0
