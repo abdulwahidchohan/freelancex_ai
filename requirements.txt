@@ -51,6 +51,11 @@ aiofiles>=23.0.0  # Async file operations
 watchdog>=3.0.0  # File system monitoring
 cryptography>=41.0.0  # Data encryption
 psutil>=5.9.0  # System monitoring
+aiosqlite>=0.19.0  # Async SQLite operations
+aiohttp>=3.8.0  # Async HTTP client
+PyJWT>=2.8.0  # JWT token handling
+matplotlib>=3.7.0  # For monitoring charts
+secrets  # For secure random generation (built-in)
 
 # Development Tools
 ipdb>=0.13.0
