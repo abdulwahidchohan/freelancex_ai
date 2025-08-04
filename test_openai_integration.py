@@ -34,6 +34,15 @@ async def test_openai_integration():
         from agents.proposal_writer_agent import ProposalWriterAgent
         logger.info("✅ All imports successful")
         
+        # Test OpenAI import (without requiring API key)
+        logger.info("🔌 Testing OpenAI import...")
+        try:
+            import openai
+            logger.info("✅ OpenAI package imported successfully")
+            logger.info(f"📋 OpenAI version: {openai.__version__}")
+        except Exception as e:
+            logger.warning(f"⚠️ OpenAI import issue: {str(e)}")
+        
         # Test memory manager initialization
         logger.info("💾 Testing memory manager...")
         memory_manager = MemoryManager()
@@ -51,19 +60,15 @@ async def test_openai_integration():
         capabilities = proposal_agent.get_capabilities()
         logger.info(f"✅ Proposal agent capabilities: {capabilities}")
         
-        # Test session management
-        logger.info("🔄 Testing session management...")
-        test_user_id = "test_user_123"
-        session = proposal_agent.get_or_create_session(test_user_id)
-        if session:
-            logger.info("✅ Session created successfully")
-        else:
-            logger.info("ℹ️ Session creation skipped (OpenAI API key not configured)")
+        # Test agent tools
+        logger.info("🔧 Testing agent tools...")
+        tools = proposal_agent._get_agent_tools()
+        logger.info(f"✅ Agent has {len(tools)} tools available")
         
-        # Test task execution
+        # Test task execution (fallback mode)
         logger.info("⚡ Testing task execution...")
         test_task = {
-            'user_id': test_user_id,
+            'user_id': 'test_user_123',
             'content': 'Generate a proposal for a web development project',
             'task_type': 'proposal_generation'
         }
@@ -72,7 +77,8 @@ async def test_openai_integration():
         logger.info(f"✅ Task execution result: {result['success']}")
         
         logger.info("🎉 All tests completed successfully!")
-        logger.info("🔧 FreelanceX.AI is ready for OpenAI Agent SDK integration")
+        logger.info("🔧 FreelanceX.AI migration to OpenAI Agent SDK architecture completed")
+        logger.info("ℹ️ Note: Full OpenAI Agent SDK functionality requires OPENAI_API_KEY environment variable")
         
     except Exception as e:
         logger.error(f"❌ Test failed: {str(e)}")

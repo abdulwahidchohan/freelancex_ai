@@ -11,7 +11,6 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-from openai_agents import Agent, Session
 from openai import OpenAI
 from pydantic import BaseModel
 

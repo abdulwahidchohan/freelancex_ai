@@ -6,7 +6,6 @@ from datetime import datetime
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from openai_agents import Agent, Session
 from openai import OpenAI
 from pydantic import BaseModel
 

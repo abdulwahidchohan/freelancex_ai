@@ -16,7 +16,9 @@ user_session_timeout = 1296000  # 15 days
 cache = false
 
 # Authorized origins
-allow_origins = ["*"]
+# Using a wildcard for origins is not recommended for production environments.
+# It's better to specify the exact origins that are allowed to connect.
+allow_origins = ["http://localhost:8000"] # Example for local development
 
 [features]
 # Process and display HTML in messages. This can be a security risk (see https://stackoverflow.com/questions/19603097/why-is-it-dangerous-to-render-user-generated-html-or-javascript)
@@ -45,8 +47,11 @@ edit_message = true
     #    accept = ["image/*", "audio/*", "video/*"]
     # 3. For specific file extensions:
     #    accept = { "application/octet-stream" = [".xyz", ".pdb"] }
-    # Note: Using "*/*" is not recommended as it may cause browser warnings
-    accept = ["*/*"]
+    # Note: Using "*/*" is not recommended as it may cause browser warnings and is a security risk.
+    # It's better to specify the MIME types of the files you expect to receive.
+    # For example, to allow only PDFs and images:
+    # accept = ["application/pdf", "image/png", "image/jpeg"]
+    accept = ["*/*"] # Consider restricting this to specific file types.
     max_files = 20
     max_size_mb = 500
 
