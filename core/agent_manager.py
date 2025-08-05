@@ -11,7 +11,14 @@ from dataclasses import dataclass
 from datetime import datetime
 import uuid
 
-from openai_agents import Agent, Session
+try:
+    from freelancex_agents import Agent, Runner, Session, SQLiteSession
+except ImportError:
+    # Handle import error - use fallback or raise descriptive error
+    Agent = None
+    Runner = None
+    Session = None  
+    SQLiteSession = None
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)

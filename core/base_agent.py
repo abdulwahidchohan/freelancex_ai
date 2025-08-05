@@ -8,6 +8,14 @@ from enum import Enum
 
 from openai import OpenAI
 from pydantic import BaseModel
+try:
+    from freelancex_agents import Agent, Runner, Session, SQLiteSession
+except ImportError:
+    # Handle import error if OpenAI agents SDK is not installed
+    Agent = None
+    Runner = None  
+    Session = None
+    SQLiteSession = None
 
 class AgentStatus(Enum):
     IDLE = "idle"
@@ -65,8 +73,8 @@ class BaseAgent(ABC):
             self.openai_agent = Agent(
                 name=f"FreelanceX {self.agent_name}",
                 instructions=self.system_prompt,
-                model="gpt-4o-mini",
-                tools=self._get_agent_tools()
+                tools=self._get_agent_tools(),
+                handoffs=self._get_handoff_agents()
             )
             
         except Exception as e:
@@ -103,6 +111,10 @@ class BaseAgent(ABC):
         """Get tools for this agent - to be overridden by subclasses"""
         return []
     
+    def _get_handoff_agents(self) -> List:
+        """Get handoff agents for this agent - to be overridden by subclasses"""
+        return []
+    
     def _load_ethical_guidelines(self) -> Dict[str, Any]:
         """Load FreelanceX.AI ethical guidelines"""
         return {
@@ -121,7 +133,11 @@ class BaseAgent(ABC):
             return None
             
         if user_id not in self.sessions:
-            self.sessions[user_id] = Session(agent=self.openai_agent)
+            # Use SQLiteSession for persistent conversation history
+            self.sessions[user_id] = SQLiteSession(
+                session_id=f"{self.agent_name}_{user_id}",
+                db_path="data/sessions.db"
+            )
             self.logger.info(f"Created new session for user: {user_id}")
         return self.sessions[user_id]
 
@@ -229,7 +245,43 @@ class BaseAgent(ABC):
 
     @abstractmethod
     async def execute_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute agent-specific task - must be implemented by subclasses"""
+        """Execute agent-specific task using OpenAI Agents SDK"""
+        try:
+            user_id = task.get('user_id', 'default')
+            content = task.get('content', '')
+            
+            # Use OpenAI Agent SDK with session management
+            if self.openai_agent:
+                session = self.get_or_create_session(user_id)
+                if session:
+                    result = await Runner.run(
+                        agent=self.openai_agent,
+                        message=content,
+                        session=session
+                    )
+                    return {
+                        'success': True,
+                        'result': result.final_output,
+                        'agent': self.agent_name,
+                        'timestamp': datetime.now().isoformat(),
+                        'session_id': f"{self.agent_name}_{user_id}"
+                    }
+            
+            # Fallback to custom processing
+            return await self.process_custom_task(task)
+            
+        except Exception as e:
+            self.logger.error(f"❌ Task execution failed for {self.agent_name}: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'agent': self.agent_name,
+                'timestamp': datetime.now().isoformat()
+            }
+
+    @abstractmethod
+    async def process_custom_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """Process task with custom logic - fallback method"""
         pass
 
     @abstractmethod

@@ -27,14 +27,14 @@ from backend.database import DatabaseManager
 from backend.api_gateway import APIGateway
 from backend.monitoring_system import get_monitoring_system
 from backend.external_integrations import get_integrations_manager
-from openai_agents import Agent, Session
+from freelancex_agents import Agent, Runner, Session
 from openai import OpenAI
 
 # Import specialized agents
-from agents.proposal_writer_agent import ProposalWriterAgent
-from agents.job_search_agent import JobSearchAgent
-from agents.web_search_agent import WebSearchAgent
-from agents.math_agent import MathAgent
+from freelancex_agents.proposal_writer_agent import ProposalWriterAgent
+from freelancex_agents.job_search_agent import JobSearchAgent
+from freelancex_agents.web_search_agent import WebSearchAgent
+from freelancex_agents.math_agent import MathAgent
 
 # Configure logging
 def setup_logging(log_level: str = "INFO"):

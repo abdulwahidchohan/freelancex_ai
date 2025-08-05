@@ -23,14 +23,14 @@ from core.agent_manager import AgentManager
 from core.base_agent import BaseAgent, AgentStatus
 from core.executive_agent import ExecutiveAgent
 from memory.sqlite_memory import MemoryManager
-from openai_agents import Agent, Session
+from freelancex_agents import Agent, Runner, Session, SQLiteSession
 from openai import OpenAI
 
 # Import specialized agents
-from agents.proposal_writer_agent import ProposalWriterAgent
-from agents.job_search_agent import JobSearchAgent
-from agents.web_search_agent import WebSearchAgent  
-from agents.math_agent import MathAgent
+from freelancex_agents.proposal_writer_agent import ProposalWriterAgent
+from freelancex_agents.job_search_agent import JobSearchAgent
+from freelancex_agents.web_search_agent import WebSearchAgent  
+from freelancex_agents.math_agent import MathAgent
 
 # Additional imports for comprehensive system
 import os

@@ -13,7 +13,7 @@ from pathlib import Path
 import aiosqlite
 import hashlib
 
-from openai_agents import Session
+from freelancex_agents import Session
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)

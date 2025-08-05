@@ -1,20 +1,17 @@
 """
-FreelanceX.AI Agents Package
-Specialized AI agents for freelancer assistance
+FreelanceX.AI Agents - OpenAI Agents SDK Implementation
 """
 
-from .executive_agent import ExecutiveAgent
-from .job_search_agent import JobSearchAgent
-from .proposal_writer_agent import ProposalWriterAgent
-from .planning_agent import PlanningAgent
-from .invoice_agent import InvoiceAgent
-from .client_agent import ClientAgent
+from .triage_agent import triage_agent
+from .job_search_agent import job_search_agent  
+from .proposal_writer_agent import proposal_writer_agent
+from .web_research_agent import web_research_agent
+from .math_agent import math_agent
 
 __all__ = [
-    'ExecutiveAgent',
-    'JobSearchAgent', 
-    'ProposalWriterAgent',
-    'PlanningAgent',
-    'InvoiceAgent',
-    'ClientAgent'
-] 
+    'triage_agent',
+    'job_search_agent', 
+    'proposal_writer_agent',
+    'web_research_agent',
+    'math_agent'
+]
