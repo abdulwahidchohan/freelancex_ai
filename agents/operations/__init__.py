@@ -13,6 +13,7 @@ from .marketing_agent import marketing_agent
 from .client_liaison_agent import client_liaison_agent
 from .negotiator_agent import negotiator_agent
 from .automation_agent import automation_agent
+from .content_agent import content_agent
 
 __all__ = [
     'job_search_agent',
@@ -22,5 +23,6 @@ __all__ = [
     'marketing_agent',
     'client_liaison_agent',
     'negotiator_agent',
-    'automation_agent'
+    'automation_agent',
+    'content_agent'
 ]

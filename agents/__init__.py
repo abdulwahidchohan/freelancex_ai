@@ -29,9 +29,15 @@ from .triage_agent import triage_agent
 __all__ += [
     # Executive Core Layer
     'executive_agent',
+    'governance_agent',
+    'system_architect_agent',
+    'marketplace_manager_agent',
     
     # Cognitive Core Layer
     'cognitive_agent',
+    'context_manager_agent',
+    'shadow_learning_agent',
+    'knowledge_graph_agent',
     
     # Operations Layer
     'job_search_agent',
@@ -42,12 +48,13 @@ __all__ += [
     'client_liaison_agent',
     'negotiator_agent',
     'automation_agent',
+    'content_agent',
     
     # User Experience Layer
     'ux_agent',
     
     # Security & Reliability Layer
-    'security_agent',
+    'security_agent', 'threat_detection_agent', 'self_repair_agent',
     
     # Expansion Layer
     'expansion_agent',

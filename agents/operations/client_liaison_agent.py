@@ -34,8 +34,19 @@ def analyze_client_relationship(client_data: Dict[str, Any]) -> ClientProfile:
     Returns:
         Structured client profile with insights and opportunities
     """
-    # This function will be executed by the LLM through function calling
-    pass
+    industry = client_data.get("industry", "general")
+    preferences = client_data.get("preferences", {})
+    pain_points = client_data.get("pain_points", ["unclear requirements"]) or ["unclear requirements"]
+    opportunities = ["regular status updates", "clear scope documents"]
+    return ClientProfile(
+        industry=industry,
+        company_size=client_data.get("company_size"),
+        communication_style=preferences.get("tone", "professional"),
+        project_history=client_data.get("history", []),
+        preferences=preferences,
+        pain_points=pain_points,
+        opportunities=opportunities,
+    )
 
 @tool
 def create_client_communication(request_type: str, context: str, client_profile: Optional[ClientProfile] = None) -> CommunicationTemplate:
@@ -49,8 +60,32 @@ def create_client_communication(request_type: str, context: str, client_profile:
     Returns:
         Communication template with subject, message, and follow-up suggestions
     """
-    # This function will be executed by the LLM through function calling
-    pass
+    tone = "professional"
+    key_points = []
+    if client_profile:
+        tone = client_profile.communication_style or tone
+        key_points.extend(client_profile.pain_points[:2])
+    subject = None
+    if request_type.lower() == "update":
+        subject = "Project Update"
+        message = f"Hello, here's a concise update: {context}"
+    elif request_type.lower() == "proposal":
+        subject = "Proposal"
+        message = f"Please find the proposal details: {context}"
+    elif request_type.lower() == "issue":
+        subject = "Issue Resolution"
+        message = f"We identified an issue: {context}. Proposed resolution and next steps enclosed."
+    else:
+        subject = "Follow-up"
+        message = f"Following up regarding: {context}"
+    follow_up = ["Schedule a call", "Confirm next milestone"]
+    return CommunicationTemplate(
+        subject=subject,
+        message=message,
+        tone=tone,
+        key_points_addressed=key_points,
+        follow_up_suggestions=follow_up,
+    )
 
 # Create client liaison agent
 client_liaison_agent = Agent(

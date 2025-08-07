@@ -45,8 +45,23 @@ def create_marketing_strategy(niche: str, goals: List[str], budget: Optional[str
     Returns:
         Detailed marketing strategy with audience, messaging, and channels
     """
-    # This function will be executed by the LLM through function calling
-    pass
+    channels = ["LinkedIn", "Portfolio Website", "Email Outreach"]
+    if "content" in (" ".join(goals)).lower():
+        channels.append("Blog/Medium")
+    content_plan = [
+        {"type": "case_study", "cadence": "monthly"},
+        {"type": "short_tip_post", "cadence": "2x weekly"},
+    ]
+    metrics = ["Leads", "CTR", "Conversion", "Engagement"]
+    timeline = {"phase_1": "weeks 1-2", "phase_2": "weeks 3-6", "phase_3": "ongoing"}
+    return MarketingStrategy(
+        target_audience=[niche],
+        key_messaging=[f"{niche} specialist", "Outcome-focused", "Reliable delivery"],
+        channels=channels,
+        content_plan=content_plan,
+        metrics=metrics,
+        timeline=timeline,
+    )
 
 @tool
 def generate_marketing_content(request: ContentRequest) -> ContentResponse:
@@ -58,8 +73,20 @@ def generate_marketing_content(request: ContentRequest) -> ContentResponse:
     Returns:
         Marketing content with title, body, and engagement tips
     """
-    # This function will be executed by the LLM through function calling
-    pass
+    title = None
+    if request.content_type in ("blog", "email"):
+        title = f"{request.target_audience}: {request.key_points[0] if request.key_points else 'Insights'}"
+    content = f"Tone: {request.tone}. Key points: " + ", ".join(request.key_points)
+    seo_keywords = [k for k in request.key_points][:5] if request.content_type == "blog" else None
+    hashtags = ["#freelance", "#marketing", f"#{request.target_audience.replace(' ', '')}"] if request.content_type == "social_post" else None
+    return ContentResponse(
+        title=title,
+        content=content,
+        seo_keywords=seo_keywords,
+        hashtags=hashtags,
+        posting_schedule={"recommended": "Tue/Thu 9am"} if request.content_type == "social_post" else None,
+        engagement_tips=["Ask a question", "Use a strong CTA"],
+    )
 
 # Create marketing agent
 marketing_agent = Agent(

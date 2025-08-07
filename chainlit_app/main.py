@@ -12,16 +12,27 @@ from datetime import datetime
 
 import chainlit as cl
 from agents import Runner, Session, set_default_openai_key
+from config.settings import get_config
+from memory.sqlite_memory import SQLiteMemoryManager
 
-# Import our triage agent
+// Import our triage agent
 from agents.triage_agent import triage_agent
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Load configuration
+cfg = get_config()
+
+# Kill switch flag (config-driven)
+KILL_SWITCH_ENV = os.getenv("FREELANCEX_KILL_SWITCH", "false").lower() in ("1", "true", "yes", "on")
+
+# Memory engine (session recall)
+memory_manager = SQLiteMemoryManager(db_path=cfg.get_database_url().replace("sqlite:///", "") if cfg.database.type == "sqlite" else "memory.db")
+
 # Set OpenAI API key
-api_key = os.getenv('OPENAI_API_KEY')
+api_key = os.getenv('OPENAI_API_KEY') or cfg.external_integrations.openai_api_key
 if not api_key:
     logger.warning("OPENAI_API_KEY not set. Please set it in your environment variables.")
 else:
@@ -35,6 +46,8 @@ async def start():
         # Create a new session for this chat
         session = Session()
         cl.user_session.set("session", session)
+        # Persist session for recall
+        await memory_manager.store_session(session_id=str(id(session)), user_id="default", agent_name=triage_agent.name, session=session)
         
         # Send welcome message
         await cl.Message(
@@ -93,6 +106,11 @@ Ready to get started? What would you like to work on today?
 async def main(message: cl.Message):
     """Handle incoming messages using the OpenAI Agent SDK"""
     try:
+        # Kill switch check
+        if KILL_SWITCH_ENV:
+            await cl.Message(content="⛔ System is temporarily paused by kill switch.").send()
+            return
+
         # Show typing indicator
         thinking_msg = cl.Message(content="🤔 Analyzing your request...")
         await thinking_msg.send()
@@ -167,6 +185,8 @@ async def end():
         # Log session information if available
         if session:
             logger.info(f"Ending chat session with trace IDs: {session.trace_ids if hasattr(session, 'trace_ids') else 'None'}")
+            # Deactivate session in memory
+            await memory_manager.delete_session(session_id=str(id(session)))
         
         await cl.Message(
             content="👋 Thank you for using FreelanceX.AI! Your session has been saved. Come back anytime for more freelance assistance.",

@@ -33,8 +33,31 @@ def analyze_business_strategy(current_state: str, goals: List[str]) -> Strategic
     Returns:
         Strategic decision with implementation steps
     """
-    # This function will be executed by the LLM through function calling
-    pass
+    # Lightweight heuristic implementation to make the tool usable
+    prioritized_goals = goals[:]
+    # Simple prioritization: goals containing growth/retention/security first
+    priority_order = ["growth", "revenue", "retention", "security", "scalability"]
+    prioritized_goals.sort(key=lambda g: next((i for i, k in enumerate(priority_order) if k in g.lower()), 99))
+
+    implementation_steps = [
+        "Define success metrics and baseline current KPIs",
+        "Allocate owners and timelines for each strategic goal",
+        "Sequence initiatives by impact vs. effort",
+        "Set up weekly review and risk tracking",
+    ]
+    expected_outcomes = [
+        "Improved focus on high-impact goals",
+        "Clear accountability and execution cadence",
+        "Early risk detection and mitigation",
+    ]
+
+    return StrategicDecision(
+        decision_type="strategic_plan",
+        priority=", ".join(prioritized_goals[:3]) if prioritized_goals else "stability",
+        reasoning=f"Based on current_state length {len(current_state)} and goals provided, ordered by common business priorities.",
+        implementation_steps=implementation_steps,
+        expected_outcomes=expected_outcomes,
+    )
 
 @tool
 def evaluate_performance(metrics: Dict[str, Any]) -> BusinessMetrics:
@@ -46,8 +69,29 @@ def evaluate_performance(metrics: Dict[str, Any]) -> BusinessMetrics:
     Returns:
         Analysis of business metrics with recommendations
     """
-    # This function will be executed by the LLM through function calling
-    pass
+    revenue_growth = float(metrics.get("revenue_growth", 0.0) or 0.0)
+    csat = float(metrics.get("client_satisfaction", 0.0) or 0.0)
+    efficiency = float(metrics.get("operational_efficiency", 0.0) or 0.0)
+
+    recommendations: List[str] = []
+    if revenue_growth < 0:
+        recommendations.append("Address negative revenue trend with pricing and pipeline initiatives")
+    if csat < 4.2:
+        recommendations.append("Improve client satisfaction via communication cadences and QA gates")
+    if efficiency < 0.7:
+        recommendations.append("Automate repetitive tasks and remove bottlenecks")
+    if not recommendations:
+        recommendations.append("Maintain momentum; invest in scalable systems")
+
+    market_position = metrics.get("market_position", "stable")
+
+    return BusinessMetrics(
+        revenue_growth=revenue_growth,
+        client_satisfaction=csat,
+        operational_efficiency=efficiency,
+        market_position=str(market_position),
+        recommendations=recommendations,
+    )
 
 # Create executive agent
 executive_agent = Agent(

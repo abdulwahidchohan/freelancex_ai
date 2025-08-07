@@ -33,8 +33,18 @@ def analyze_user_feedback(feedback_data: List[Dict[str, Any]]) -> UserFeedback:
     Returns:
         Analysis of user feedback with key issues and recommendations
     """
-    # This function will be executed by the LLM through function calling
-    pass
+    negatives = [f for f in feedback_data if str(f.get("sentiment", "")).lower() in ("neg", "negative")]
+    positives = [f for f in feedback_data if str(f.get("sentiment", "")).lower() in ("pos", "positive")]
+    key_issues = [{"issue": f.get("issue", "general") } for f in negatives[:5]]
+    improvement = [{"area": "navigation", "change": "simplify menu"}]
+    priority = [{"item": "onboarding", "impact": "high"}]
+    return UserFeedback(
+        sentiment="mixed" if negatives and positives else ("positive" if positives else "negative"),
+        key_issues=key_issues,
+        positive_aspects=[f.get("highlight", "") for f in positives[:5]],
+        improvement_opportunities=improvement,
+        priority_recommendations=priority,
+    )
 
 @tool
 def generate_ux_recommendations(interaction_area: str, current_description: str, user_personas: Optional[List[Dict[str, Any]]] = None) -> UXRecommendation:
@@ -48,8 +58,19 @@ def generate_ux_recommendations(interaction_area: str, current_description: str,
     Returns:
         UX recommendation with specific changes and expected benefits
     """
-    # This function will be executed by the LLM through function calling
-    pass
+    changes = [
+        {"change": "reduce cognitive load", "method": "progressive disclosure"},
+        {"change": "improve affordances", "method": "button labels & contrast"},
+    ]
+    benefits = ["faster task completion", "higher satisfaction"]
+    return UXRecommendation(
+        area=interaction_area,
+        current_state=current_description,
+        recommended_changes=changes,
+        expected_benefits=benefits,
+        implementation_complexity="medium",
+        testing_approach={"method": "A/B", "metric": "task success"},
+    )
 
 # Create UX agent
 ux_agent = Agent(

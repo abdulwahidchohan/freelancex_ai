@@ -14,8 +14,16 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass, asdict
 from openai import OpenAI
 
-# Import our custom Session class from the new module
-from freelancex_agents.agent_sdk import Session
+# Fallback import for Session used by Chainlit/agents
+try:
+    from openai_agents import Session  # provided by openai-function-calling-agents
+except Exception:  # pragma: no cover
+    class Session:  # minimal placeholder to avoid import failure if package missing at import-time
+        def to_dict(self):
+            return {}
+        @classmethod
+        def from_dict(cls, data):
+            return cls()
 
 logger = logging.getLogger(__name__)
 
@@ -67,51 +75,46 @@ class SQLiteMemoryManager:
                 await db.execute("""
                     CREATE TABLE IF NOT EXISTS memory_entries (
                         id TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
                         agent_name TEXT NOT NULL,
-                    content TEXT NOT NULL,
+                        content TEXT NOT NULL,
                         memory_type TEXT NOT NULL,
                         importance REAL DEFAULT 0.5,
                         created_at TEXT NOT NULL,
                         last_accessed TEXT NOT NULL,
                         access_count INTEGER DEFAULT 0,
-                    metadata TEXT,
+                        metadata TEXT,
                         tags TEXT,
                         context TEXT,
-                        is_active BOOLEAN DEFAULT 1,
-                        INDEX(user_id, agent_name),
-                        INDEX(memory_type, importance),
-                        INDEX(last_accessed)
-                )
-            """)
+                        is_active INTEGER DEFAULT 1
+                    )
+                """)
             
                 # Create user profiles table
                 await db.execute("""
-                CREATE TABLE IF NOT EXISTS user_profiles (
-                    user_id TEXT PRIMARY KEY,
-                    name TEXT,
+                    CREATE TABLE IF NOT EXISTS user_profiles (
+                        user_id TEXT PRIMARY KEY,
+                        name TEXT,
                         email TEXT,
-                    preferences TEXT,
+                        preferences TEXT,
                         created_at TEXT NOT NULL,
                         last_updated TEXT NOT NULL,
-                        is_active BOOLEAN DEFAULT 1
-                )
-            """)
+                        is_active INTEGER DEFAULT 1
+                    )
+                """)
             
                 # Create agent sessions table
                 await db.execute("""
-                CREATE TABLE IF NOT EXISTS agent_sessions (
-                    session_id TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    agent_name TEXT NOT NULL,
+                    CREATE TABLE IF NOT EXISTS agent_sessions (
+                        session_id TEXT PRIMARY KEY,
+                        user_id TEXT NOT NULL,
+                        agent_name TEXT NOT NULL,
                         session_data TEXT NOT NULL,
                         created_at TEXT NOT NULL,
                         last_accessed TEXT NOT NULL,
-                        is_active BOOLEAN DEFAULT 1,
-                        INDEX(user_id, agent_name),
-                        INDEX(last_accessed)
-                )
-            """)
+                        is_active INTEGER DEFAULT 1
+                    )
+                """)
             
             # Create indexes for better performance
                 await db.execute("CREATE INDEX IF NOT EXISTS idx_memory_user_agent ON memory_entries(user_id, agent_name)")

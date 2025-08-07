@@ -37,8 +37,19 @@ def analyze_workflow(workflow_description: str, pain_points: Optional[List[str]]
     Returns:
         Workflow analysis with automation opportunities and recommendations
     """
-    # This function will be executed by the LLM through function calling
-    pass
+    steps = [{"step": i+1, "desc": s.strip()} for i, s in enumerate(workflow_description.split("->")) if s.strip()]
+    ineff = [{"area": p, "cause": "manual repetition"} for p in (pain_points or ["context switching"])]
+    opportunities = [{"task": "reporting", "tool": "automation script"}]
+    rec_tools = [{"name": "Zapier"}, {"name": "Make"}]
+    plan = {"phase_1": "map process", "phase_2": "automate low-risk tasks", "phase_3": "monitor"}
+    return WorkflowAnalysis(
+        current_steps=steps or [{"step": 1, "desc": workflow_description}],
+        inefficiencies=ineff,
+        automation_opportunities=opportunities,
+        recommended_tools=rec_tools,
+        implementation_plan=plan,
+        expected_time_savings="15-30%",
+    )
 
 @tool
 def create_automation_solution(task_description: str, tools_available: List[str], skill_level: str) -> AutomationScript:
@@ -52,8 +63,21 @@ def create_automation_solution(task_description: str, tools_available: List[str]
     Returns:
         Automation script or process with setup and usage instructions
     """
-    # This function will be executed by the LLM through function calling
-    pass
+    name = f"Automate {task_description[:30]}".
+    purpose = "Reduce manual effort and errors"
+    setup = ["List required credentials", "Create triggers and actions", "Test end-to-end"]
+    usage = ["Run on schedule", "Monitor logs", "Fallback to manual if failure"]
+    limitations = ["Third-party rate limits", "API changes"]
+    return AutomationScript(
+        name=name,
+        purpose=purpose,
+        tools_required=tools_available,
+        setup_instructions=setup,
+        script_content=None,
+        usage_instructions=usage,
+        limitations=limitations,
+        maintenance_notes=["Review monthly"],
+    )
 
 # Create automation agent
 automation_agent = Agent(

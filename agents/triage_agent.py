@@ -45,9 +45,68 @@ def analyze_request(user_input: str) -> RequestAnalysis:
     Returns:
         Analysis of the request including intent, confidence, and required agents
     """
-    # This function will be executed by the LLM through function calling
-    # The actual implementation is handled by the model
-    pass
+    # Simple deterministic routing heuristic to bootstrap triage behavior
+    text = (user_input or "").lower()
+
+    # Keyword-based mapping to agent names (matching Agent.name values)
+    routes = [
+        ("job", "Job Search Agent"),
+        ("search", "Job Search Agent"),
+        ("proposal", "Proposal Writer Agent"),
+        ("cover letter", "Proposal Writer Agent"),
+        ("market", "Web Research Agent"),
+        ("research", "Web Research Agent"),
+        ("trend", "Web Research Agent"),
+        ("price", "Web Research Agent"),
+        ("rate", "Math Agent"),
+        ("budget", "Math Agent"),
+        ("tax", "Math Agent"),
+        ("roi", "Math Agent"),
+        ("marketing", "Marketing Agent"),
+        ("brand", "Marketing Agent"),
+        ("client", "Client Liaison Agent"),
+        ("communication", "Client Liaison Agent"),
+        ("negotia", "Negotiator Agent"),
+        ("contract", "Negotiator Agent"),
+        ("automation", "Automation Agent"),
+        ("workflow", "Automation Agent"),
+        ("ux", "User Experience Agent"),
+        ("experience", "User Experience Agent"),
+        ("security", "Security Agent"),
+        ("threat", "Security Agent"),
+        ("expand", "Expansion Agent"),
+        ("feature", "Expansion Agent"),
+        ("strategy", "Executive Core Agent"),
+        ("govern", "Executive Core Agent"),
+        ("decision", "Cognitive Core Agent"),
+        ("reason", "Cognitive Core Agent"),
+    ]
+
+    matched_agents: List[str] = []
+    for keyword, agent_name in routes:
+        if keyword in text and agent_name not in matched_agents:
+            matched_agents.append(agent_name)
+
+    if not matched_agents:
+        matched_agents = ["Cognitive Core Agent"]
+        primary_intent = "reasoning"
+        confidence = 0.5
+        reasoning = "No specific domain keywords found; defaulting to Cognitive Core Agent."
+    else:
+        primary_intent = matched_agents[0]
+        confidence = 0.7 if len(matched_agents) == 1 else 0.6
+        reasoning = f"Matched keywords to agents: {', '.join(matched_agents)}"
+
+    # Rough complexity heuristic
+    complexity = "high" if (" and " in text or len(text.split()) > 30) else "medium" if len(text.split()) > 12 else "low"
+
+    return RequestAnalysis(
+        primary_intent=primary_intent,
+        confidence=confidence,
+        required_agents=matched_agents,
+        complexity=complexity,
+        reasoning=reasoning,
+    )
 
 # Create triage agent with handoffs to specialized agents
 triage_agent = Agent(

@@ -33,8 +33,25 @@ def perform_security_assessment(system_description: str, current_measures: Optio
     Returns:
         Security assessment with vulnerabilities and recommendations
     """
-    # This function will be executed by the LLM through function calling
-    pass
+    measures = current_measures or {}
+    vulns = []
+    if not measures.get("rate_limiting"):
+        vulns.append({"area": "API", "issue": "No rate limiting"})
+    if not measures.get("encryption_at_rest"):
+        vulns.append({"area": "Data", "issue": "No encryption at rest"})
+    compliance = [{"framework": "GDPR", "status": "partial"}]
+    recs = [
+        {"action": "Enable rate limiting"},
+        {"action": "Encrypt sensitive data at rest"},
+    ]
+    priority = ["Rate limiting", "Backups & encryption"]
+    return SecurityAssessment(
+        risk_level="medium" if vulns else "low",
+        vulnerabilities=vulns,
+        compliance_issues=compliance,
+        recommendations=recs,
+        priority_actions=priority,
+    )
 
 @tool
 def create_data_protection_plan(data_types: List[str], regulatory_requirements: Optional[List[str]] = None) -> DataProtectionPlan:
@@ -47,8 +64,20 @@ def create_data_protection_plan(data_types: List[str], regulatory_requirements: 
     Returns:
         Data protection plan with measures and controls
     """
-    # This function will be executed by the LLM through function calling
-    pass
+    protections = {
+        "PII": ["encryption", "access controls", "data minimization"],
+        "financial": ["encryption", "auditing"],
+    }
+    measures = {dt: protections.get(dt.lower(), ["backups", "access logging"]) for dt in data_types}
+    access_controls = [{"role": "admin", "scope": "all"}, {"role": "agent", "scope": "limited"}]
+    ir = {"detect": "monitoring", "respond": "isolate & notify", "recover": "restore from backup"}
+    return DataProtectionPlan(
+        data_types=[{"type": dt} for dt in data_types],
+        protection_measures=measures,
+        access_controls=access_controls,
+        incident_response=ir,
+        compliance_considerations=regulatory_requirements or [],
+    )
 
 # Create security agent
 security_agent = Agent(

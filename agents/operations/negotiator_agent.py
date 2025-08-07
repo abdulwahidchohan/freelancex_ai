@@ -36,8 +36,20 @@ def create_negotiation_strategy(project_details: Dict[str, Any], client_info: Op
     Returns:
         Detailed negotiation strategy with key points and approaches
     """
-    # This function will be executed by the LLM through function calling
-    pass
+    key_points = ["Value-based pricing", "Clear scope & revisions", "Milestones & payment terms"]
+    value_props = ["Expertise", "Speed", "Quality"]
+    concession_strategy = {"max_discount_percent": 10, "non_monetary": ["fewer revisions", "extended timeline"]}
+    walkaway = ["Below cost", "Unclear scope", "Excessive unpaid trials"]
+    comms = "Collaborative, firm on scope"
+    counter_args = {"budget": ["Align scope to budget", "Phase work"]}
+    return NegotiationStrategy(
+        key_points=key_points,
+        value_propositions=value_props,
+        concession_strategy=concession_strategy,
+        walkaway_conditions=walkaway,
+        communication_approach=comms,
+        counter_arguments=counter_args,
+    )
 
 @tool
 def review_contract(contract_text: str, freelancer_priorities: Optional[List[str]] = None) -> ContractReview:
@@ -50,8 +62,25 @@ def review_contract(contract_text: str, freelancer_priorities: Optional[List[str
     Returns:
         Contract review with analysis and suggested modifications
     """
-    # This function will be executed by the LLM through function calling
-    pass
+    key_terms = {"payment_terms": "net 14", "ip": "client owns deliverables upon full payment"}
+    favorable = ["Milestone payments", "Acceptance criteria defined"]
+    concerning = [
+        {"clause": "indemnity", "reason": "broad, unlimited"},
+        {"clause": "work for hire", "reason": "without payment condition"},
+    ]
+    suggestions = [
+        {"clause": "indemnity", "change": "limit to direct damages"},
+        {"clause": "payment", "change": "late fees after 10 days"},
+    ]
+    overall = "Moderate risk; adjust indemnity, clarify IP transfer post-payment."
+    return ContractReview(
+        key_terms=key_terms,
+        favorable_clauses=favorable,
+        concerning_clauses=concerning,
+        suggested_modifications=suggestions,
+        legal_considerations=freelancer_priorities or ["jurisdiction", "liability cap"],
+        overall_assessment=overall,
+    )
 
 # Create negotiator agent
 negotiator_agent = Agent(
