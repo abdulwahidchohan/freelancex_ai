@@ -14,9 +14,10 @@
 
 ## ✨ Core Features
 
-### 🤖 AI Agent Ecosystem
+### 🤖 AI Agent Ecosystem (Powered by OpenAI Agent SDK)
 - **JobSearchAgent**: Real-time job discovery across multiple platforms (Upwork, Fiverr, LinkedIn, etc.)
-- **WebSearchAgent**: In-depth research on business strategies, AI tools, and industry trends
+- **ProposalWriterAgent**: Create compelling proposals and pricing strategies
+- **WebResearchAgent**: In-depth research on business strategies, AI tools, and industry trends
 - **MathAgent**: Financial analysis, statistical modeling, and project budgeting
 
 ### 🏗️ Unified Architecture
@@ -51,12 +52,44 @@
    cd freelancex-ai
    ```
 
-2. **Install dependencies**
+2. **Set up a virtual environment**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Configure the system**
+4. **Set up your OpenAI API key**
+   ```bash
+   # On Linux/Mac
+   export OPENAI_API_KEY=your-api-key-here
+   
+   # On Windows (PowerShell)
+   $env:OPENAI_API_KEY="your-api-key-here"
+   ```
+
+5. **Run the application**
+   ```bash
+    cd chainlit_app
+    chainlit run main.py
+    ```
+
+## 🔌 OpenAI Agent SDK Integration
+
+FreelanceX.AI leverages the OpenAI Agent SDK to provide powerful agent capabilities:
+
+- **Session Management**: Maintain conversation history across agent runs
+- **Tracing**: Monitor agent execution in the OpenAI Dashboard
+- **Handoffs**: Seamlessly transfer control between specialized agents
+- **Tool Integration**: Easily extend agent capabilities with custom tools
+
+See the [TRACE_VIEWING_GUIDE.md](./TRACE_VIEWING_GUIDE.md) for details on how to view and analyze agent traces.
+
+## 🛠️ Configuration
    ```bash
    # Copy and customize configuration
    cp config/freelancex_config.json config/my_config.json

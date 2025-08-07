@@ -1,97 +1,156 @@
-"""
-FreelanceX.AI Triage Agent - OpenAI Agents SDK Implementation
-Central coordinator that routes requests to specialized agents
+"""FreelanceX.AI Triage Agent - OpenAI Agents SDK Implementation
+Main coordinator that routes user requests to specialized agents
+Implements proper OpenAI Agent SDK features including tracing and session management
 """
 
-from agents import Agent, InputGuardrail, GuardrailFunctionOutput
-from agents.exceptions import InputGuardrailTripwireTriggered
+from agents import Agent, Runner, tool
 from pydantic import BaseModel
-import logging
+from typing import List, Dict, Any
 
-logger = logging.getLogger(__name__)
+# Import agents from all layers
+# Executive Core Layer
+from .executive_core import executive_agent
 
-class TaskValidation(BaseModel):
-    is_valid_task: bool
-    task_category: str
-    reasoning: str
+# Cognitive Core Layer
+from .cognitive_core import cognitive_agent
+
+# Operations Layer
+from .operations import job_search_agent, proposal_writer_agent, web_research_agent, math_agent
+from .operations import marketing_agent, client_liaison_agent, negotiator_agent, automation_agent
+
+# User Experience Layer
+from .user_experience import ux_agent
+
+# Security & Reliability Layer
+from .security import security_agent
+
+# Expansion Layer
+from .expansion import expansion_agent
+
+class RequestAnalysis(BaseModel):
+    """Analysis of user request for routing"""
+    primary_intent: str
     confidence: float
+    required_agents: List[str]
+    complexity: str
+    reasoning: str
 
-# Guardrail agent for input validation
-guardrail_agent = Agent(
-    name="Task Validation Guardrail",
-    instructions="""You validate if user requests are legitimate freelancer tasks.
+@tool
+def analyze_request(user_input: str) -> RequestAnalysis:
+    """Analyze the user request to determine routing strategy
     
-    Valid tasks include:
-    - Job searching and career advice
-    - Proposal writing and client communication
-    - Research and market analysis  
-    - Financial calculations and budgeting
-    - Project planning and time management
+    Args:
+        user_input: The user's request message
     
-    Invalid tasks include:
-    - Unethical requests
-    - Personal information requests
-    - Off-topic conversations
-    
-    Respond with validation details.""",
-    output_type=TaskValidation
-)
+    Returns:
+        Analysis of the request including intent, confidence, and required agents
+    """
+    # This function will be executed by the LLM through function calling
+    # The actual implementation is handled by the model
+    pass
 
-async def task_validation_guardrail(ctx, agent, input_data: str) -> GuardrailFunctionOutput:
-    """Validate incoming tasks"""
-    try:
-        from agents import Runner
-        
-        result = await Runner.run(
-            agent=guardrail_agent,
-            message=f"Validate this freelancer task: {input_data}",
-            context=ctx.context
-        )
-        
-        validation = result.final_output_as(TaskValidation)
-        
-        # Trigger tripwire if task is invalid or confidence too low
-        tripwire_triggered = not validation.is_valid_task or validation.confidence < 0.3
-        
-        return GuardrailFunctionOutput(
-            output_info=validation,
-            tripwire_triggered=tripwire_triggered
-        )
-        
-    except Exception as e:
-        logger.error(f"Task validation error: {e}")
-        return GuardrailFunctionOutput(
-            output_info=TaskValidation(
-                is_valid_task=False,
-                task_category="error", 
-                reasoning=f"Validation error: {str(e)}",
-                confidence=0.0
-            ),
-            tripwire_triggered=True
-        )
-
-# Main triage agent
+# Create triage agent with handoffs to specialized agents
 triage_agent = Agent(
     name="FreelanceX Triage Agent",
-    instructions="""You are the central coordinator for FreelanceX.AI, a freelancer assistance platform.
+    instructions="""You are the main coordinator for FreelanceX.AI, a comprehensive AI assistant for freelancers.
 
-    Your role is to:
-    1. Understand user requests related to freelancing
-    2. Route requests to the appropriate specialized agent
-    3. Coordinate between agents when needed
-    4. Provide helpful responses to users
+Your role is to analyze user requests and route them to the most appropriate specialized agent within our hierarchical structure:
 
-    Available specialized agents:
-    - JobSearchAgent: Finding jobs, career advice, skill matching
-    - ProposalWriterAgent: Writing proposals, cover letters, client communication
-    - WebResearchAgent: Market research, industry trends, competitive analysis
-    - MathAgent: Financial calculations, budgeting, ROI analysis
+**Available Specialized Agents:**
 
-    Always be professional, helpful, and focused on freelancer success.""",
-    
-    handoffs=[],  # Will be populated when other agents are imported
-    
-    input_guardrails=[
-        InputGuardrail(guardrail_function=task_validation_guardrail)
-    ]
+**Executive Core Layer:**
+- **Executive Agent** - For high-level strategic decisions and business planning
+
+**Cognitive Core Layer:**
+- **Cognitive Agent** - For complex reasoning, decision-making, and problem-solving
+
+**Operations Layer:**
+- **Job Search Agent** - For finding freelance jobs, analyzing market demand, career guidance
+- **Proposal Writer Agent** - For creating compelling proposals, cover letters, pricing strategies
+- **Web Research Agent** - For market research, industry trends, competitor analysis
+- **Math Agent** - For financial calculations, budgeting, ROI analysis, tax calculations
+- **Marketing Agent** - For marketing strategy, content creation, personal branding
+- **Client Liaison Agent** - For client relationship management and communication
+- **Negotiator Agent** - For contract and rate negotiations, terms review
+- **Automation Agent** - For workflow automation and efficiency improvements
+
+**User Experience Layer:**
+- **UX Agent** - For optimizing user interface and experience
+
+**Security & Reliability Layer:**
+- **Security Agent** - For security assessments and data protection
+
+**Expansion Layer:**
+- **Expansion Agent** - For platform growth and new capability development
+
+**Routing Guidelines:**
+- Strategic business decisions → Executive Agent
+- Complex reasoning tasks → Cognitive Agent
+- Job-related queries → Job Search Agent
+- Proposal/application requests → Proposal Writer Agent  
+- Research/market analysis → Web Research Agent
+- Financial/mathematical calculations → Math Agent
+- Marketing and branding → Marketing Agent
+- Client communication → Client Liaison Agent
+- Contract and rate negotiations → Negotiator Agent
+- Workflow optimization → Automation Agent
+- User experience feedback → UX Agent
+- Security concerns → Security Agent
+- Platform growth ideas → Expansion Agent
+- Complex requests may require multiple agents
+
+Before routing, use the analyze_request tool to determine the best agent(s) for the job.
+Always provide a brief explanation of why you're routing to a specific agent.
+
+When handling complex requests that might require multiple agents, consider:
+1. Which agent should handle the primary task
+2. What information needs to be gathered first
+3. How to synthesize information from multiple sources
+
+Ensure all responses are helpful, accurate, and tailored to freelancers' needs.""",
+    handoffs=[
+        # Executive Core Layer
+        executive_agent,
+        
+        # Cognitive Core Layer
+        cognitive_agent,
+        
+        # Operations Layer
+        job_search_agent,
+        proposal_writer_agent, 
+        web_research_agent,
+        math_agent,
+        marketing_agent,
+        client_liaison_agent,
+        negotiator_agent,
+        automation_agent,
+        
+        # User Experience Layer
+        ux_agent,
+        
+        # Security & Reliability Layer
+        security_agent,
+        
+        # Expansion Layer
+        expansion_agent
+    ],
+    tools=[analyze_request]
 )
+
+async def route_request(user_input: str) -> Dict[str, Any]:
+    """Route user request to appropriate agent"""
+    try:
+        result = await Runner.run(triage_agent, user_input)
+        return {
+            "success": True,
+            "agent_used": result.last_agent.name if result.last_agent else "Triage Agent",
+            "response": result.final_output,
+            "handoffs": len(result.handoffs) if result.handoffs else 0,
+            "trace_id": result.trace_id if hasattr(result, 'trace_id') else None
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "response": "I apologize, but I encountered an error processing your request. Please try again."
+        }

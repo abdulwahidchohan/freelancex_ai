@@ -1,107 +1,21 @@
-# Core AI Agent Frameworks and Libraries
-openai-agents>=0.2.4  # Updated to latest OpenAI Agents SDK
+# Core OpenAI Agents SDK
+openai-function-calling-agents>=0.2.4
 openai>=1.0.0
+
+# UI Framework
+chainlit>=1.0.0
+
+# Basic utilities
 pydantic>=2.0.0
-instructor>=0.3.0  # Enhanced typing for LLMs
-
-# Backend and Data Management
-fastapi>=0.100.0
-uvicorn[standard]>=0.22.0
-sqlalchemy>=2.0.0
-aiosqlite>=0.19.0  # For async SQLite operations
-asyncpg>=0.28.0  # For async PostgreSQL
-psycopg2-binary>=2.9.0  # For PostgreSQL
-PyYAML>=6.0.0  # For configuration files
-redis>=4.5.0  # For caching
-alembic>=1.11.0  # For database migrations
-
-# API Gateway and Security
-pyjwt>=2.8.0  # For JWT token handling
-slowapi>=0.1.8  # For rate limiting
-bcrypt>=4.0.0  # For password hashing
-python-multipart>=0.0.6  # For form data handling
-
-# UI/Frontend
-chainlit
-streamlit  # Alternative UI framework
-
-# Utility and Data Processing
-pydantic>=2.0.0
-requests>=2.31.0
+python-dotenv>=1.0.0
+aiohttp>=3.8.0
 beautifulsoup4>=4.12.0
-lxml>=4.9.0
-pandas>=2.0.0  # For data manipulation
-numpy>=1.24.0  # For numerical operations
-python-dotenv>=1.0.0  # Environment management
 
-# Multimodal Capabilities
-pillow>=10.0.0
-opencv-python>=4.8.0
-transformers>=4.30.0  # For image processing models
-torch>=2.0.0  # For deep learning support
+# Math and data processing
+numpy>=1.24.0
+pandas>=2.0.0
+requests>=2.31.0
 
-# Voice Processing
-pyttsx3>=2.90
-SpeechRecognition>=3.10.0
-sounddevice>=0.4.0  # For audio I/O
-librosa>=0.10.0  # For audio processing
-
-# External API Integrations
-aiohttp>=3.8.0  # For async HTTP requests
-httpx>=0.24.0  # Alternative HTTP client
-scrapy>=2.10.0  # For web scraping
-selenium>=4.10.0  # For browser automation
-
-# Monitoring and Observability
-psutil>=5.9.0  # System monitoring
-prometheus-client>=0.17.0  # For Prometheus metrics
-grafana-api>=1.0.0  # For Grafana integration
-
-# Email and Notifications
-# smtplib is a built-in module and doesn't need to be installed
-sendgrid>=6.10.0  # For SendGrid email service
-slack-sdk>=3.21.0  # For Slack notifications
-twilio>=8.5.0  # For SMS notifications
-
-# Testing and Quality Assurance
-pytest>=7.4.0
-pytest-cov>=4.1.0  # For coverage reports
-pytest-asyncio>=0.21.0  # For async tests
-factory-boy>=3.3.0  # For test data generation
-
-# FreelanceX.AI Specific Dependencies
-schedule>=1.2.0  # For daily routines scheduling
-aiofiles>=23.0.0  # Async file operations
-watchdog>=3.0.0  # File system monitoring
-cryptography>=41.0.0  # Data encryption
-psutil>=5.9.0  # System monitoring (moved from Monitoring section to ensure it's installed)
-# secrets is a built-in module and doesn't need to be installed
-
-# Job Board API Integrations
-linkedin-api>=2.0.0  # For LinkedIn API
-# upwork-python>=0.1.0  # For Upwork API (commented out as package not found)
-# freelancer-sdk>=1.0.0  # For Freelancer.com API (commented out as package may not be available)
-
-# Financial and Mathematical Libraries
-sympy>=1.12.0  # For symbolic mathematics
-scipy>=1.11.0  # For scientific computing
-matplotlib>=3.7.0  # For plotting and visualization
-plotly>=5.15.0  # For interactive charts
-
-# Development Tools
-ipdb>=0.13.0
-black>=23.7.0
-flake8>=6.1.0
-mypy>=1.4.0  # Type checking
-isort>=5.12.0  # Import sorting
-pre-commit>=3.3.0  # Git hooks
-
-# Deployment and Containerization
-docker>=6.1.0  # For Docker integration
-kubernetes>=27.2.0  # For Kubernetes deployment
-gunicorn>=21.2.0  # For WSGI server
-
-# Configuration and Environment Management
-configparser>=5.3.0  # For configuration files
-environs>=9.5.0  # For environment variable management
-dynaconf>=3.2.0  # For dynamic configuration
+# Optional: Advanced features
+# scipy>=1.11.0  # For advanced math
+# matplotlib>=3.7.0  # For charts

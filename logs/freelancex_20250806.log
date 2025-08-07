@@ -1,0 +1,17 @@
+2025-08-06 03:33:00,984 - core.executive_agent - ERROR - Failed to load config: 'charmap' codec can't decode byte 0x8d in position 1014: character maps to <undefined>
+2025-08-06 03:33:00,985 - core.executive_agent - INFO - ExecutiveAgent initializing with OpenAI Agent SDK...
+2025-08-06 03:33:15,991 - core.executive_agent - ERROR - Failed to load config: 'charmap' codec can't decode byte 0x8d in position 1014: character maps to <undefined>
+2025-08-06 03:33:15,992 - core.executive_agent - INFO - ExecutiveAgent initializing with OpenAI Agent SDK...
+2025-08-06 03:33:47,711 - core.executive_agent - ERROR - Failed to load config: 'charmap' codec can't decode byte 0x8d in position 1014: character maps to <undefined>
+2025-08-06 03:33:47,712 - core.executive_agent - INFO - ExecutiveAgent initializing with OpenAI Agent SDK...
+2025-08-06 03:33:48,290 - core.executive_agent - INFO - Using fallback agent mode
+2025-08-06 03:33:48,822 - FreelanceX.Main - ERROR - Agent initialization error: Can't instantiate abstract class JobSearchAgent with abstract method execute_task
+2025-08-06 03:33:48,824 - FreelanceX.Main - INFO - Daily routines scheduled successfully
+2025-08-06 03:33:48,824 - FreelanceX.Main - INFO - FreelanceX.AI initialized successfully
+2025-08-06 03:33:48,904 - FreelanceX.Main - INFO - No user profile found - new user setup required
+2025-08-06 03:33:48,917 - FreelanceX.Main - INFO - All 0 agents started successfully
+2025-08-06 03:33:48,920 - FreelanceX.Main - ERROR - Error updating session metrics: 'AgentManager' object has no attribute 'get_system_status'
+2025-08-06 03:34:18,921 - FreelanceX.Main - ERROR - Error updating session metrics: 'AgentManager' object has no attribute 'get_system_status'
+2025-08-06 03:34:48,922 - FreelanceX.Main - ERROR - Error updating session metrics: 'AgentManager' object has no attribute 'get_system_status'
+2025-08-06 03:35:18,929 - FreelanceX.Main - ERROR - Error updating session metrics: 'AgentManager' object has no attribute 'get_system_status'
+2025-08-06 03:35:40,577 - FreelanceX.Main - ERROR - Error during shutdown: 'AgentManager' object has no attribute 'shutdown'

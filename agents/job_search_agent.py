@@ -1,128 +1,141 @@
-"""
-FreelanceX.AI Job Search Agent - OpenAI Agents SDK Implementation
+"""FreelanceX.AI Job Search Agent - OpenAI Agents SDK Implementation
 Specialized agent for finding and analyzing freelance opportunities
 """
 
+# Import Agent and tool from the package
 from agents import Agent, tool
 import logging
+from typing import List, Dict, Any, Optional
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
+class JobSearchCriteria(BaseModel):
+    """Criteria for job search"""
+    keywords: str
+    budget_range: Optional[str] = "any"
+    location: Optional[str] = "remote"
+    platforms: Optional[List[str]] = None
+    job_type: Optional[str] = None
+    experience_level: Optional[str] = None
+
+class JobListing(BaseModel):
+    """Job listing information"""
+    title: str
+    budget: str
+    description: str
+    client_rating: str
+    posted: str
+    platform: str
+    url: Optional[str] = None
+
 @tool
-def search_jobs(keywords: str, budget_range: str = "any", location: str = "remote") -> str:
+def search_jobs(criteria: JobSearchCriteria) -> List[JobListing]:
     """Search for freelance jobs matching the given criteria
     
     Args:
-        keywords: Job keywords to search for (e.g., "python developer", "web designer")
-        budget_range: Budget preference ("low", "medium", "high", or "any")
-        location: Location preference (default: "remote")
+        criteria: The search criteria including keywords, budget range, location, etc.
     
     Returns:
-        Formatted list of job opportunities
+        List of job listings matching the criteria
     """
     try:
         # Simulate job search results (in real implementation, integrate with job boards)
         sample_jobs = [
-            {
-                "title": f"{keywords} - Remote Opportunity", 
-                "budget": "$3,000 - $5,000",
-                "description": f"Looking for experienced {keywords} for exciting project",
-                "client_rating": "4.8/5",
-                "posted": "2 days ago"
-            },
-            {
-                "title": f"Senior {keywords} Position",
-                "budget": "$5,000 - $8,000", 
-                "description": f"Established company seeking {keywords} expert",
-                "client_rating": "4.9/5",
-                "posted": "1 day ago"
-            },
-            {
-                "title": f"{keywords} Freelance Project",
-                "budget": "$2,000 - $4,000",
-                "description": f"Startup looking for talented {keywords}",
-                "client_rating": "4.6/5", 
-                "posted": "3 hours ago"
-            }
+            JobListing(
+                title=f"{criteria.keywords} - Remote Opportunity", 
+                budget="$3,000 - $5,000",
+                description=f"Looking for experienced {criteria.keywords} for exciting project",
+                client_rating="4.8/5",
+                posted="2 days ago",
+                platform="Upwork",
+                url="https://www.upwork.com/jobs/example1"
+            ),
+            JobListing(
+                title=f"Senior {criteria.keywords} Position",
+                budget="$5,000 - $8,000", 
+                description=f"Established company seeking {criteria.keywords} expert",
+                client_rating="4.9/5",
+                posted="1 day ago",
+                platform="Fiverr",
+                url="https://www.fiverr.com/jobs/example2"
+            ),
+            JobListing(
+                title=f"{criteria.keywords} Freelance Project",
+                budget="$2,000 - $4,000",
+                description=f"Startup looking for talented {criteria.keywords}",
+                client_rating="4.6/5", 
+                posted="3 hours ago",
+                platform="LinkedIn",
+                url="https://www.linkedin.com/jobs/example3"
+            )
         ]
         
         # Filter by budget if specified
-        if budget_range != "any":
-            budget_filters = {
-                "low": range(1000, 3000),
-                "medium": range(3000, 7000), 
-                "high": range(7000, 20000)
-            }
-            # In real implementation, filter based on actual budget ranges
+        if criteria.budget_range and criteria.budget_range.lower() != "any":
+            if criteria.budget_range.lower() == "low":
+                sample_jobs = [job for job in sample_jobs if "$2,000" in job.budget]
+            elif criteria.budget_range.lower() == "medium":
+                sample_jobs = [job for job in sample_jobs if "$3,000" in job.budget]
+            elif criteria.budget_range.lower() == "high":
+                sample_jobs = [job for job in sample_jobs if "$5,000" in job.budget]
         
-        result = f"Found {len(sample_jobs)} jobs for '{keywords}':\n\n"
-        for i, job in enumerate(sample_jobs, 1):
-            result += f"{i}. {job['title']}\n"
-            result += f"   Budget: {job['budget']}\n"
-            result += f"   Client: {job['client_rating']}\n"
-            result += f"   Posted: {job['posted']}\n"
-            result += f"   {job['description']}\n\n"
-        
-        return result
+        # Filter by platform if specified
+        if criteria.platforms:
+            sample_jobs = [job for job in sample_jobs if job.platform in criteria.platforms]
+            
+        return sample_jobs
         
     except Exception as e:
-        logger.error(f"Job search error: {e}")
-        return f"Error searching for jobs: {str(e)}"
+        logger.error(f"Error searching jobs: {str(e)}")
+        return []
 
-@tool 
-def analyze_job_market(skill: str) -> str:
-    """Analyze market demand and rates for a specific skill
+@tool
+def analyze_job_market(keywords: str) -> Dict[str, Any]:
+    """Analyze the job market for specific skills or roles
     
     Args:
-        skill: The skill to analyze (e.g., "React", "Python", "UI/UX Design")
+        keywords: Skills or job roles to analyze (e.g., "Python developer", "UX designer")
     
     Returns:
-        Market analysis report
+        Market analysis including demand, average rates, and trends
     """
     try:
-        # Simulate market analysis
+        # Simulate market analysis (in real implementation, use actual data sources)
         analysis = {
-            "demand": "High",
-            "avg_hourly_rate": "$75 - $125",
-            "competition": "Medium",
-            "trending": True,
-            "growth_projection": "15% annually"
+            "demand_level": "high",
+            "avg_hourly_rate": "$45-65",
+            "avg_project_rate": "$3,000-$7,000",
+            "trending_platforms": ["Upwork", "LinkedIn", "Toptal"],
+            "growing_niches": [f"{keywords} for startups", f"AI-assisted {keywords}"],
+            "required_skills": ["Communication", "Time management", "Portfolio presentation"],
+            "market_outlook": f"The market for {keywords} shows strong growth potential over the next 6-12 months, with increasing demand from tech startups and established companies undergoing digital transformation."
         }
         
-        report = f"Market Analysis for {skill}:\n\n"
-        report += f"• Demand Level: {analysis['demand']}\n"
-        report += f"• Average Rate: {analysis['avg_hourly_rate']}\n" 
-        report += f"• Competition: {analysis['competition']}\n"
-        report += f"• Growth Projection: {analysis['growth_projection']}\n\n"
-        
-        if analysis['trending']:
-            report += f"✅ {skill} is currently trending in the freelance market!\n\n"
-        
-        report += "Recommendations:\n"
-        report += f"• Focus on building a strong portfolio in {skill}\n"
-        report += "• Consider specializing in niche areas\n"
-        report += "• Network with other professionals in this field\n"
-        
-        return report
+        return analysis
         
     except Exception as e:
-        logger.error(f"Market analysis error: {e}")
-        return f"Error analyzing market for {skill}: {str(e)}"
+        logger.error(f"Error analyzing job market: {str(e)}")
+        return {"error": str(e)}
 
+# Create job search agent
 job_search_agent = Agent(
-    name="Job Search Agent", 
-    handoff_description="Specialist for finding freelance jobs, analyzing markets, and career guidance",
-    instructions="""You are a specialist in freelance job discovery and career guidance.
+    name="Job Search Agent",
+    instructions="""You are a specialized Job Search Agent for FreelanceX.AI, focused on helping freelancers find relevant opportunities.
 
-    Your expertise includes:
-    - Finding relevant job opportunities across platforms
-    - Analyzing market demand for skills
-    - Providing career advice for freelancers  
-    - Skill matching and recommendations
-    - Rate and pricing guidance
+Your capabilities include:
+1. Searching for freelance jobs across multiple platforms based on keywords, budget, and other criteria
+2. Analyzing job market trends and demand for specific skills
+3. Providing insights on competitive rates and growing niches
 
-    Always provide actionable insights and be encouraging about freelance opportunities.
-    Use your tools to search for jobs and analyze markets when users ask.""",
-    
+When responding to users:
+- Always provide structured, easy-to-read job listings
+- Include relevant details like budget, client rating, and posting date
+- Offer actionable advice on how to apply for promising opportunities
+- Suggest improvements to search criteria if results are limited
+
+Use the search_jobs tool to find specific opportunities and the analyze_job_market tool for broader market insights.
+
+Ensure all responses are tailored to freelancers' needs and provide practical next steps.""",
     tools=[search_jobs, analyze_job_market]
 )
