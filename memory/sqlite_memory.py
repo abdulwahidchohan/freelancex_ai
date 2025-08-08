@@ -14,16 +14,11 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass, asdict
 from openai import OpenAI
 
-# Fallback import for Session used by Chainlit/agents
-try:
-    from openai_agents import Session  # provided by openai-function-calling-agents
+# Use SDK Session protocol types for typing only, we will persist minimal metadata
+try:  # pragma: no cover
+    from agents.memory import Session as AgentSessionProtocol
 except Exception:  # pragma: no cover
-    class Session:  # minimal placeholder to avoid import failure if package missing at import-time
-        def to_dict(self):
-            return {}
-        @classmethod
-        def from_dict(cls, data):
-            return cls()
+    from typing import Protocol as AgentSessionProtocol  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +50,7 @@ class SQLiteMemoryManager:
         self.initialized = False
         
         # OpenAI Agent SDK session storage
-        self.active_sessions: Dict[str, Session] = {}
+        self.active_sessions: Dict[str, AgentSessionProtocol] = {}
         
         # Memory cache for performance
         self.memory_cache: Dict[str, MemoryEntry] = {}
@@ -79,6 +74,7 @@ class SQLiteMemoryManager:
                         agent_name TEXT NOT NULL,
                         content TEXT NOT NULL,
                         memory_type TEXT NOT NULL,
+                        bucket TEXT NOT NULL DEFAULT 'short',
                         importance REAL DEFAULT 0.5,
                         created_at TEXT NOT NULL,
                         last_accessed TEXT NOT NULL,
@@ -137,6 +133,7 @@ class SQLiteMemoryManager:
                           agent_name: str, 
                           content: str, 
                           memory_type: str = "general",
+                          bucket: str = "short",
                           importance: float = 0.5,
                           metadata: Dict[str, Any] = None,
                           tags: List[str] = None,
@@ -181,11 +178,11 @@ class SQLiteMemoryManager:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute("""
                     INSERT INTO memory_entries 
-                    (id, user_id, agent_name, content, memory_type, importance, 
+                    (id, user_id, agent_name, content, memory_type, bucket, importance, 
                      created_at, last_accessed, access_count, metadata, tags, context, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    memory_id, user_id, agent_name, content, memory_type, importance,
+                    memory_id, user_id, agent_name, content, memory_type, bucket, importance,
                     now, now, 0, json.dumps(metadata or {}), json.dumps(tags or []), context, True
                 ))
                 await db.commit()
@@ -204,6 +201,7 @@ class SQLiteMemoryManager:
                              user_id: str, 
                              agent_name: str = None,
                              memory_type: str = None,
+                              bucket: str = None,
                              limit: int = 10,
                              min_importance: float = 0.0) -> List[MemoryEntry]:
         """
@@ -238,6 +236,9 @@ class SQLiteMemoryManager:
                 if memory_type:
                     query += " AND memory_type = ?"
                     params.append(memory_type)
+                if bucket:
+                    query += " AND bucket = ?"
+                    params.append(bucket)
                     
                 query += " ORDER BY importance DESC, last_accessed DESC LIMIT ?"
                 params.append(limit)
@@ -437,7 +438,7 @@ class SQLiteMemoryManager:
             logger.error(f"Failed to delete memory: {str(e)}")
             return False
     
-    async def store_session(self, session_id: str, user_id: str, agent_name: str, session: Session):
+    async def store_session(self, session_id: str, user_id: str, agent_name: str, session: AgentSessionProtocol):
         """Store an OpenAI Agent SDK session"""
         await self.initialize()
         
@@ -445,8 +446,8 @@ class SQLiteMemoryManager:
             # Store session in memory
             self.active_sessions[session_id] = session
             
-            # Store session data in database
-            session_data = session.to_dict()
+            # Store minimal session data (opaque)
+            session_data = {"session_id": getattr(session, "session_id", session_id)}
             
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute("""
@@ -463,7 +464,7 @@ class SQLiteMemoryManager:
             logger.error(f"Failed to store session: {str(e)}")
             raise
     
-    async def get_session(self, session_id: str) -> Optional[Session]:
+    async def get_session(self, session_id: str) -> Optional[AgentSessionProtocol]:
         """Retrieve an OpenAI Agent SDK session"""
         await self.initialize()
         
@@ -481,8 +482,9 @@ class SQLiteMemoryManager:
                     row = await cursor.fetchone()
                     
                 if row:
-                    session_data = json.loads(row[0])
-                    session = Session.from_dict(session_data)
+                    _ = json.loads(row[0])
+                    # Return the in-memory instance if present; otherwise, no reconstruction
+                    session = self.active_sessions.get(session_id)
                     
                     # Update last accessed
                     await db.execute("""

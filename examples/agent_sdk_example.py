@@ -23,8 +23,8 @@ from dotenv import load_dotenv
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import FreelanceX.AI components
-from agents import triage_agent
-from openai_agents import Runner, Session, set_default_openai_key
+from fx_agents import triage_agent
+from agents import Runner, Session, set_default_openai_key
 
 # Load environment variables from .env file if it exists
 load_dotenv()

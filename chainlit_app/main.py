@@ -11,12 +11,13 @@ from typing import Dict, Any
 from datetime import datetime
 
 import chainlit as cl
-from agents import Runner, Session, set_default_openai_key
+from agents import Runner, SQLiteSession, set_default_openai_key
 from config.settings import get_config
 from memory.sqlite_memory import SQLiteMemoryManager
+from uuid import uuid4
 
-// Import our triage agent
-from agents.triage_agent import triage_agent
+# Import our triage agent via the wrapper to avoid collisions
+from fx_agents import triage_agent
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -43,8 +44,8 @@ else:
 async def start():
     """Initialize chat session"""
     try:
-        # Create a new session for this chat
-        session = Session()
+        # Create a new session for this chat (SDK concrete session)
+        session = SQLiteSession(session_id=str(uuid4()), db_path=cfg.get_database_url().replace("sqlite:///", "") if cfg.database.type == "sqlite" else ":memory:")
         cl.user_session.set("session", session)
         # Persist session for recall
         await memory_manager.store_session(session_id=str(id(session)), user_id="default", agent_name=triage_agent.name, session=session)
@@ -119,7 +120,7 @@ async def main(message: cl.Message):
         session = cl.user_session.get("session")
         if not session:
             # Create a new session if one doesn't exist
-            session = Session()
+            session = SQLiteSession(session_id=str(uuid4()), db_path=cfg.get_database_url().replace("sqlite:///", "") if cfg.database.type == "sqlite" else ":memory:")
             cl.user_session.set("session", session)
         
         # Process the message using our triage agent with the session

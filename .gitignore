@@ -1,2 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+
+# Virtual environments
+venv/
+.venv/
+Lib/
+Scripts/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/*
+*.log
+
+# Databases
+*.db
+freelancex.db
+
+# Secrets
+.env
+config/secrets.env
+
+# Chainlit artifacts
+.chainlit/
+chainlit_app/chainlit.md
+
+# Node/npm (if any)
+node_modules/
+
 .env
 venv

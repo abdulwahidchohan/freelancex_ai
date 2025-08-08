@@ -81,6 +81,7 @@ class ExternalIntegrationsConfig:
     """External integrations configuration"""
     upwork_api_key: str = ""
     upwork_api_secret: str = ""
+    upwork_redirect_uri: str = ""
     freelancer_api_key: str = ""
     linkedin_api_key: str = ""
     google_scholar_api_key: str = ""
@@ -88,6 +89,12 @@ class ExternalIntegrationsConfig:
     reddit_client_secret: str = ""
     openai_api_key: str = ""
     anthropic_api_key: str = ""
+    serpapi_api_key: str = ""
+    bing_api_key: str = ""
+    gmail_client_secret_file: str = ""
+    gmail_token_file: str = ""
+    redis_url: str = ""
+    elevenlabs_api_key: str = ""
 
 @dataclass
 class UIConfig:
