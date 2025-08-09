@@ -1,6 +1,6 @@
-"""FreelanceX.AI Triage Agent - OpenAI Agents SDK Implementation
+"""FreelanceX.AI Triage Agent - Multi-API Implementation
 Main coordinator that routes user requests to specialized agents
-Implements proper OpenAI Agent SDK features including tracing and session management
+Supports both OpenAI and Google Gemini APIs with automatic fallback
 """
 
 from agents import Agent, Runner, function_tool as tool
@@ -8,6 +8,7 @@ from functools import partial
 # Use non-strict schema to allow Dict/Any parameters in current tools
 tool = partial(tool, strict_mode=False)
 from typing import Optional
+from .custom_agent import create_custom_agent
 
 # Optional model-driven classification using OpenAI if key is present
 try:
@@ -239,17 +240,99 @@ Ensure all responses are helpful, accurate, and tailored to freelancers' needs."
     tools=[analyze_request]
 )
 
+# Create custom triage agent with multi-API support
+custom_triage_agent = create_custom_agent(
+    name="FreelanceX Triage Agent",
+    instructions="""You are the main coordinator for FreelanceX.AI, a comprehensive AI assistant for freelancers.
+
+Your role is to analyze user requests and route them to the most appropriate specialized agent within our hierarchical structure:
+
+**Available Specialized Agents:**
+
+**Executive Core Layer:**
+- **Executive Agent** - For high-level strategic decisions and business planning
+
+**Cognitive Core Layer:**
+- **Cognitive Agent** - For complex reasoning, decision-making, and problem-solving
+
+**Operations Layer:**
+- **Job Search Agent** - For finding freelance jobs, analyzing market demand, career guidance
+- **Proposal Writer Agent** - For creating compelling proposals, cover letters, pricing strategies
+- **Web Research Agent** - For market research, industry trends, competitor analysis
+- **Math Agent** - For financial calculations, budgeting, ROI analysis, tax calculations
+- **Marketing Agent** - For marketing strategy, content creation, personal branding
+- **Client Liaison Agent** - For client relationship management and communication
+- **Negotiator Agent** - For contract and rate negotiations, terms review
+- **Automation Agent** - For workflow automation and efficiency improvements
+
+**User Experience Layer:**
+- **UX Agent** - For optimizing user interface and experience
+
+**Security & Reliability Layer:**
+- **Security Agent** - For security assessments and data protection
+
+**Expansion Layer:**
+- **Expansion Agent** - For platform growth and new capability development
+
+**Routing Guidelines:**
+- Strategic business decisions → Executive Agent
+- Complex reasoning tasks → Cognitive Agent
+- Job-related queries → Job Search Agent
+- Proposal/application requests → Proposal Writer Agent  
+- Research/market analysis → Web Research Agent
+- Financial/mathematical calculations → Math Agent
+- Marketing and branding → Marketing Agent
+- Client communication → Client Liaison Agent
+- Contract and rate negotiations → Negotiator Agent
+- Workflow optimization → Automation Agent
+- User experience feedback → UX Agent
+- Security concerns → Security Agent
+- Platform growth ideas → Expansion Agent
+- Complex requests may require multiple agents
+
+Before routing, use the analyze_request tool to determine the best agent(s) for the job.
+Always provide a brief explanation of why you're routing to a specific agent.
+
+When handling complex requests that might require multiple agents, consider:
+1. Which agent should handle the primary task
+2. What information needs to be gathered first
+3. How to synthesize information from multiple sources
+
+Ensure all responses are helpful, accurate, and tailored to freelancers' needs.""",
+    tools=[analyze_request],
+    handoffs=[
+        # Executive Core Layer
+        executive_agent,
+        
+        # Cognitive Core Layer
+        cognitive_agent,
+        
+        # Operations Layer
+        job_search_agent,
+        proposal_writer_agent, 
+        web_research_agent,
+        math_agent,
+        marketing_agent,
+        client_liaison_agent,
+        negotiator_agent,
+        automation_agent,
+        
+        # User Experience Layer
+        ux_agent,
+        
+        # Security & Reliability Layer
+        security_agent,
+        
+        # Expansion Layer
+        expansion_agent
+    ]
+)
+
 async def route_request(user_input: str) -> Dict[str, Any]:
-    """Route user request to appropriate agent"""
+    """Route user request to appropriate agent using multi-API support"""
     try:
-        result = await Runner.run(triage_agent, user_input)
-        return {
-            "success": True,
-            "agent_used": result.last_agent.name if result.last_agent else "Triage Agent",
-            "response": result.final_output,
-            "handoffs": len(result.handoffs) if result.handoffs else 0,
-            "trace_id": result.trace_id if hasattr(result, 'trace_id') else None
-        }
+        result = await custom_triage_agent.run(user_input)
+        return result
     except Exception as e:
         return {
             "success": False,

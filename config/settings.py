@@ -13,10 +13,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import secrets
 from cryptography.fernet import Fernet
+from dotenv import load_dotenv
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Load environment variables from .env as early as possible
+try:
+    load_dotenv()
+    logger.info("Loaded .env file")
+except Exception:
+    # Non-fatal; continue if dotenv isn't available or file missing
+    pass
 
 @dataclass
 class DatabaseConfig:
@@ -89,6 +98,12 @@ class ExternalIntegrationsConfig:
     reddit_client_secret: str = ""
     openai_api_key: str = ""
     anthropic_api_key: str = ""
+    # Google Gemini API configuration
+    google_gemini_api_key: str = ""
+    # API Provider selection
+    primary_api_provider: str = "openai"  # "openai" or "gemini"
+    fallback_api_provider: str = "gemini"  # fallback if primary fails
+    enable_api_fallback: bool = True
     serpapi_api_key: str = ""
     bing_api_key: str = ""
     gmail_client_secret_file: str = ""
@@ -228,6 +243,11 @@ class FreelanceXConfig:
             "REDDIT_CLIENT_SECRET": ("external_integrations", "reddit_client_secret"),
             "OPENAI_API_KEY": ("external_integrations", "openai_api_key"),
             "ANTHROPIC_API_KEY": ("external_integrations", "anthropic_api_key"),
+            "GOOGLE_GEMINI_API_KEY": ("external_integrations", "google_gemini_api_key"),
+            "FREELANCEX_PRIMARY_API_PROVIDER": ("external_integrations", "primary_api_provider"),
+            "FREELANCEX_FALLBACK_API_PROVIDER": ("external_integrations", "fallback_api_provider"),
+            "FREELANCEX_ENABLE_API_FALLBACK": ("external_integrations", "enable_api_fallback"),
+            "REDIS_URL": ("external_integrations", "redis_url"),
             
             # Monitoring
             "FREELANCEX_MONITORING_ENABLED": ("monitoring", "enabled"),

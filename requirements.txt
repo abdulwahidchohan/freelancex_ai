@@ -1,6 +1,7 @@
-# Core OpenAI SDK
+# Core AI SDKs
 openai>=1.30.0
 openai-agents
+google-generativeai>=0.3.0
 
 # UI Framework
 chainlit>=1.0.0
@@ -17,11 +18,17 @@ pandas>=2.0.0
 requests>=2.31.0
 
 # Async SQLite for memory
-aiosqlite>=0.19.0
+aiosqlite>=0.20.0
 
 # API Gateway
 fastapi>=0.111.0
 uvicorn>=0.30.0
+prometheus-client>=0.20.0
+SQLAlchemy>=2.0.32
+asyncpg>=0.29.0
+passlib[bcrypt]>=1.7.4
+PyJWT>=2.8.0
+python-multipart>=0.0.9
 
 # Security utilities used in config
 cryptography>=41.0.0
@@ -33,6 +40,14 @@ google-auth-oauthlib>=1.2.1
 redis>=5.0.8
 APScheduler>=3.10.4
 
+# Observability (optional; auto-disabled if missing)
+opentelemetry-api>=1.25.0
+opentelemetry-sdk>=1.25.0
+opentelemetry-instrumentation-fastapi>=0.46b0
+opentelemetry-instrumentation-asgi>=0.46b0
+opentelemetry-exporter-otlp>=1.25.0
+
 # Optional: Advanced features
 # scipy>=1.11.0  # For advanced math
 # matplotlib>=3.7.0  # For charts
+email-validator>=2.1.0
