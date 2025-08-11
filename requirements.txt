@@ -1,53 +1,53 @@
 # Core AI SDKs
-openai>=1.30.0
+openai
 openai-agents
-google-generativeai>=0.3.0
+google-generativeai
 
 # UI Framework
-chainlit>=1.0.0
+chainlit
 
 # Basic utilities
-pydantic>=2.0.0
-python-dotenv>=1.0.0
+pydantic
+python-dotenv
 aiohttp>=3.8.0
-beautifulsoup4>=4.12.0
+beautifulsoup4
 
 # Math and data processing
-numpy>=1.24.0
-pandas>=2.0.0
-requests>=2.31.0
+numpy
+pandas
+requests
 
 # Async SQLite for memory
-aiosqlite>=0.20.0
+aiosqlite
 
 # API Gateway
-fastapi>=0.111.0
-uvicorn>=0.30.0
-prometheus-client>=0.20.0
-SQLAlchemy>=2.0.32
-asyncpg>=0.29.0
-passlib[bcrypt]>=1.7.4
-PyJWT>=2.8.0
-python-multipart>=0.0.9
+fastapi
+uvicorn
+prometheus-client
+SQLAlchemy
+asyncpg
+passlib[bcrypt]
+PyJWT
+python-multipart
 
 # Security utilities used in config
-cryptography>=41.0.0
+cryptography
 
 # Search and integrations
-requests-oauthlib>=1.3.1
-google-api-python-client>=2.142.0
-google-auth-oauthlib>=1.2.1
-redis>=5.0.8
-APScheduler>=3.10.4
+requests-oauthlib
+google-api-python-client
+google-auth-oauthlib
+redis
+APScheduler
 
 # Observability (optional; auto-disabled if missing)
-opentelemetry-api>=1.25.0
-opentelemetry-sdk>=1.25.0
-opentelemetry-instrumentation-fastapi>=0.46b0
-opentelemetry-instrumentation-asgi>=0.46b0
-opentelemetry-exporter-otlp>=1.25.0
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-asgi
+opentelemetry-exporter-otlp
 
 # Optional: Advanced features
-# scipy>=1.11.0  # For advanced math
-# matplotlib>=3.7.0  # For charts
-email-validator>=2.1.0
+scipy  # For advanced math
+matplotlib  # For charts
+email-validator

@@ -1,38 +1,47 @@
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
-*.pyd
-*.pkl
-
-# Virtual environments
+.Python
+env/
 venv/
 .venv/
-Lib/
-Scripts/
 
-# OS files
-.DS_Store
-Thumbs.db
+# Virtual envs
+venv/
+.venv/
+ENV/
 
-# Logs
-logs/*
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Logs & sqlite
 *.log
-
-# Databases
 *.db
-freelancex.db
+*.db-*
+*.sqlite3
+freelancex.db*
+*.sqlite
 
-# Secrets
+# Env files and secrets
 .env
-config/secrets.env
+.env.local
+.env.*.local
 
-# Chainlit artifacts
-.chainlit/
-chainlit_app/chainlit.md
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+lib/
+.lib/
 
-# Node/npm (if any)
-node_modules/
+# OS
+.DS_Store
 
-.env
-venv
+# Other
+.cursorrules
+.cursorignore
+.cursorignore.md
