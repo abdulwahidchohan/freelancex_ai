@@ -1,409 +1,404 @@
-#!/usr/bin/env python3
+"""Enhanced FreelanceX.AI Chainlit Application - OpenAI Agents SDK Integration
+Provides enhanced chat interface with full SDK integration
 """
-FreelanceX.AI - Agentic Chainlit Application
-Fully agentic interface using OpenAI Agent SDK with Auth Integration
-"""
-
-import asyncio
-import logging
-import os
-from typing import Dict, Any
-from datetime import datetime
 
 import chainlit as cl
-from agents import Runner, SQLiteSession, set_default_openai_key
-from config.settings import get_config
-from memory.sqlite_memory import SQLiteMemoryManager
-from uuid import uuid4
-
-# Import our triage agent via the wrapper to avoid collisions
-from fx_agents.triage_agent import route_request
-from fx_agents.api_provider import get_api_manager
-
-# Auth service integration
-import aiohttp
+import asyncio
+import logging
 import json
+import sys
+import os
+from typing import Dict, Any, Optional
+from datetime import datetime
+
+# Add the parent directory to Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from fx_agents.triage_agent import dynamic_triage_agent, route_request
+from fx_agents.custom_agent import AgentResponse
+from fx_agents.access_control import get_access_control_manager, ResourceType, PermissionLevel, AccessRequest
+from memory.sqlite_memory import get_memory, create_enhanced_session
+from config.settings import get_config
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Load configuration
-cfg = get_config()
-
-# Auth service config
-AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://127.0.0.1:8023")
-
-# Kill switch flag (config-driven)
-KILL_SWITCH_ENV = os.getenv("FREELANCEX_KILL_SWITCH", "false").lower() in ("1", "true", "yes", "on")
-
-# Memory engine (session recall)
-memory_manager = SQLiteMemoryManager(db_path=cfg.get_database_url().replace("sqlite:///", "") if cfg.database.type == "sqlite" else "memory.db")
-
-# Initialize API manager for multi-provider support
-api_manager = get_api_manager(cfg)
-available_providers = api_manager.get_available_providers()
-logger.info(f"Available API providers: {[p.provider_name for p in available_providers]}")
-
-# Set OpenAI API key for SDK compatibility
-api_key = os.getenv('OPENAI_API_KEY') or cfg.external_integrations.openai_api_key
-if api_key:
-    set_default_openai_key(api_key)
-else:
-    logger.warning("OPENAI_API_KEY not set. Some features may not work.")
-
-# Auth helper functions
-async def register_user(email: str, password: str, full_name: str = None) -> Dict[str, Any]:
-    """Register a new user with the auth service"""
-    async with aiohttp.ClientSession() as session:
-        data = {"email": email, "password": password}
-        if full_name:
-            data["full_name"] = full_name
-        
-        async with session.post(f"{AUTH_SERVICE_URL}/register", json=data) as resp:
-            if resp.status == 200:
-                return await resp.json()
-            else:
-                error_text = await resp.text()
-                raise Exception(f"Registration failed: {resp.status} - {error_text}")
-
-async def login_user(email: str, password: str) -> Dict[str, Any]:
-    """Login user and get access token"""
-    async with aiohttp.ClientSession() as session:
-        data = {"username": email, "password": password}
-        async with session.post(f"{AUTH_SERVICE_URL}/login", data=data) as resp:
-            if resp.status == 200:
-                return await resp.json()
-            else:
-                error_text = await resp.text()
-                raise Exception(f"Login failed: {resp.status} - {error_text}")
-
-async def save_chat_message(token: str, role: str, content: str) -> Dict[str, Any]:
-    """Save a chat message to the auth service"""
-    async with aiohttp.ClientSession() as session:
-        headers = {"Authorization": f"Bearer {token}"}
-        data = {"role": role, "content": content}
-        async with session.post(f"{AUTH_SERVICE_URL}/chat/save", json=data, headers=headers) as resp:
-            if resp.status == 200:
-                return await resp.json()
-            else:
-                logger.warning(f"Failed to save chat message: {resp.status}")
-                return None
-
-async def get_chat_history(token: str, limit: int = 50) -> list:
-    """Get user's chat history from auth service"""
-    async with aiohttp.ClientSession() as session:
-        headers = {"Authorization": f"Bearer {token}"}
-        async with session.get(f"{AUTH_SERVICE_URL}/chat/history?limit={limit}", headers=headers) as resp:
-            if resp.status == 200:
-                return await resp.json()
-            else:
-                logger.warning(f"Failed to get chat history: {resp.status}")
-                return []
+# Global memory instance
+memory = get_memory()
 
 @cl.on_chat_start
-async def start():
-    """Initialize chat session with auth"""
+async def on_chat_start():
+    """Enhanced chat start with SDK integration"""
     try:
-        # Check if user is authenticated
-        user_token = cl.user_session.get("auth_token")
+        # Set up enhanced session
+        session_id = cl.user_session.get("id")
+        if not session_id:
+            session_id = f"session_{datetime.now().timestamp()}"
+        user_id = cl.user_session.get("id")
         
-        if not user_token:
-            # Show login/register options
-            await cl.Message(
-                content="""
-# 🔐 Welcome to FreelanceX.AI!
-
-Please authenticate to continue:
-
-**Option 1: Quick Start (Anonymous)**
-- Type "guest" to start without authentication
-- Your session will be temporary
-
-**Option 2: Create Account**
-- Type "register" to create a new account
-- Your chat history and preferences will be saved
-
-**Option 3: Login**
-- Type "login" to sign in with existing account
-
-Choose an option by typing the command:
-                """,
-                author="FreelanceX.AI"
-            ).send()
-            return
+        # Set trace metadata for SDK integration
+        trace_metadata = {
+            "user_id": user_id,
+            "session_id": session_id,
+            "session_type": "freelance_consultation",
+            "platform": "chainlit",
+            "start_time": datetime.now().isoformat()
+        }
         
-        # User is authenticated, load their history
-        history = await get_chat_history(user_token, limit=10)
-        if history:
-            await cl.Message(content=f"📚 Loaded {len(history)} previous messages from your history.").send()
+        # Create enhanced session (simplified to avoid SDK session issues)
+        try:
+            session = await create_enhanced_session(
+                session_id=session_id,
+                agent=dynamic_triage_agent,
+                user_id=user_id,
+                trace_metadata=trace_metadata
+            )
+        except Exception as session_error:
+            logger.warning(f"Session creation failed, continuing without SDK session: {str(session_error)}")
+            session = None
         
-        # Create a new session for this chat (SDK concrete session)
-        session = SQLiteSession(session_id=str(uuid4()), db_path=cfg.get_database_url().replace("sqlite:///", "") if cfg.database.type == "sqlite" else ":memory:")
-        cl.user_session.set("session", session)
+        # Store session info
+        cl.user_session.set("session_id", session_id)
+        cl.user_session.set("user_id", user_id)
+        cl.user_session.set("trace_metadata", trace_metadata)
         
-        # Send welcome message for authenticated users
+        # Welcome message with enhanced features
+        welcome_message = """
+        🚀 **Welcome to FreelanceX.AI - Enhanced Edition!**
+        
+        I'm your AI assistant with **full OpenAI Agents SDK integration** and enhanced capabilities:
+        
+        ✨ **Enhanced Features:**
+        - 🧠 **Dynamic Memory Integration** - I remember our conversations
+        - 🔄 **Intelligent Handoffs** - Seamless agent coordination
+        - 🛡️ **Guardrails & Safety** - Secure and reliable responses
+        - 📊 **Performance Monitoring** - Optimized response times
+        - 🔍 **Advanced Tracing** - Detailed debugging and insights
+        
+        🎯 **What I can help you with:**
+        - 📝 **Proposal Writing** - Professional proposals and bids
+        - 🔍 **Job Search** - Find freelance opportunities
+        - 📈 **Marketing Strategy** - Campaign planning and analysis
+        - 🧮 **Financial Planning** - Budgeting and pricing strategies
+        - 🔬 **Market Research** - Industry analysis and trends
+        - 🛡️ **Security & Compliance** - Data protection and risk assessment
+        - 🎨 **UX/UI Design** - User experience optimization
+        - 🚀 **Business Growth** - Expansion strategies and planning
+        
+        **How to get started:**
+        Simply describe what you need help with, and I'll route your request to the most appropriate specialized agent!
+        
+        💡 **Pro Tips:**
+        - Be specific about your needs for better routing
+        - Ask follow-up questions for detailed analysis
+        - Request different perspectives from various agents
+        """
+        
         await cl.Message(
-            content="""
-# 🚀 Welcome back to FreelanceX.AI!
-
-I'm your AI assistant designed to help you succeed in the freelance world. Here's what I can do:
-
-## 🎯 **Core Capabilities**
-- **Job Search**: Find opportunities across multiple platforms (Upwork, Fiverr, LinkedIn)
-- **Proposal Writing**: Create compelling proposals with market research
-- **Web Research**: Gather market insights and industry data
-- **Financial Management**: Calculate rates, budgets, and tax estimates
-
-## 🛠️ **How to Use**
-Simply tell me what you need! For example:
-- "Find Python developer jobs on Upwork"
-- "Write a proposal for a web development project"
-- "Research market rates for React developers"
-- "Calculate my project budget for a $50/hour rate"
-
-Ready to get started? What would you like to work on today?
-            """,
-            author="FreelanceX.AI"
+            content=welcome_message,
+            author="FreelanceX.AI Assistant"
         ).send()
         
+        logger.info(f"Enhanced chat session started: {session_id}")
+        
     except Exception as e:
-        logger.error(f"Error in chat start: {str(e)}")
+        logger.error(f"Failed to start enhanced chat session: {str(e)}")
         await cl.Message(
-            content="Welcome to FreelanceX.AI! I'm ready to help you with your freelance needs.",
-            author="FreelanceX.AI"
+            content="⚠️ Session initialization failed. Please refresh and try again.",
+            author="System"
         ).send()
 
 @cl.on_message
-async def main(message: cl.Message):
-    """Handle incoming messages using the OpenAI Agent SDK with auth"""
+async def on_message(message: cl.Message):
+    """Enhanced message handling with SDK integration"""
     try:
-        # Check authentication state
-        auth_state = cl.user_session.get("auth_state")
-        if auth_state:
-            await handle_auth_flow(message, auth_state)
-            return
+        # Get session information
+        session_id = cl.user_session.get("session_id")
+        user_id = cl.user_session.get("user_id")
+        trace_metadata = cl.user_session.get("trace_metadata", {})
         
-        # Check for auth commands
-        user_input = message.content.strip().lower()
-        if user_input == "guest":
-            # Set guest mode
-            cl.user_session.set("auth_token", None)
-            cl.user_session.set("user_mode", "guest")
-            
-            # Create session and show welcome
-            session = SQLiteSession(session_id=str(uuid4()), db_path=cfg.get_database_url().replace("sqlite:///", "") if cfg.database.type == "sqlite" else ":memory:")
-            cl.user_session.set("session", session)
-            
-            await cl.Message(content="👋 Welcome! You're now in guest mode. Your session will be temporary.").send()
-            await cl.Message(content="What would you like to work on today?").send()
-            return
-            
-        elif user_input == "register":
-            # Show registration form
-            await cl.Message(content="📝 **Registration Form**\n\nPlease provide your details:").send()
-            await cl.Message(content="Email:").send()
-            cl.user_session.set("auth_state", "register_email")
-            return
-            
-        elif user_input == "login":
-            # Show login form
-            await cl.Message(content="🔑 **Login**\n\nPlease provide your credentials:").send()
-            await cl.Message(content="Email:").send()
-            cl.user_session.set("auth_state", "login_email")
-            return
+        # Ensure we have a valid session_id
+        if not session_id:
+            session_id = f"session_{datetime.now().timestamp()}"
+            cl.user_session.set("session_id", session_id)
+            logger.warning(f"Session ID was None, created new one: {session_id}")
         
-        # Kill switch check
-        if KILL_SWITCH_ENV:
-            await cl.Message(content="⛔ System is temporarily paused by kill switch.").send()
-            return
-
-        # Show typing indicator
-        thinking_msg = cl.Message(content="🤔 Analyzing your request...")
-        await thinking_msg.send()
+        # Update trace metadata
+        trace_metadata.update({
+            "message_count": trace_metadata.get("message_count", 0) + 1,
+            "last_message_time": datetime.now().isoformat(),
+            "message_length": len(message.content)
+        })
         
-        # Get the session from user_session
-        session = cl.user_session.get("session")
-        if not session:
-            # Create a new session if one doesn't exist
-            session = SQLiteSession(session_id=str(uuid4()), db_path=cfg.get_database_url().replace("sqlite:///", "") if cfg.database.type == "sqlite" else ":memory:")
-            cl.user_session.set("session", session)
+        # Add user message to memory (only if session_id is valid)
+        if session_id:
+            try:
+                await memory.add_memory_entry(
+                    session_id=session_id,
+                    message_type="user",
+                    content=message.content,
+                    user_id=user_id,
+                    metadata={
+                        "message_id": message.id,
+                        "timestamp": datetime.now().isoformat(),
+                        "trace_metadata": trace_metadata
+                    }
+                )
+            except Exception as memory_error:
+                logger.error(f"Memory entry failed: {str(memory_error)}")
+                # Continue without memory entry rather than failing the entire request
         
-        # Process the message using our triage agent with multi-API support
-        result = await route_request(message.content)
-        
-        # Remove thinking message
-        await thinking_msg.remove()
-        
-        # Create response message
-        response_content = result.get("response", "No response generated")
-        
-        # Add metadata if available
-        metadata = []
-        if result.get("agent_used"):
-            metadata.append(f"🤖 {result['agent_used']}")
-        if result.get("provider"):
-            metadata.append(f"🔌 {result['provider']}")
-        if result.get("handoffs"):
-            metadata.append(f"🔄 {result['handoffs']} handoffs")
-        if result.get("trace_id"):
-            metadata.append(f"📊 Trace ID: {result['trace_id']}")
-            logger.info(f"View trace at: https://platform.openai.com/traces/{result['trace_id']}")
-        
-        if metadata:
-            response_content += f"\n\n---\n{' | '.join(metadata)}"
-        
-        # Save message to auth service if authenticated
-        user_token = cl.user_session.get("auth_token")
-        if user_token:
-            await save_chat_message(user_token, "user", message.content)
-            await save_chat_message(user_token, "assistant", response_content)
-        
+        # Show processing indicator
         await cl.Message(
-            content=response_content,
-            author="FreelanceX.AI"
+            content="🤔 Analyzing your request and routing to the best agent...",
+            author="System"
         ).send()
         
+        # Route request with enhanced features
+        triage_result = await route_request(
+            message=message.content,
+            session_id=session_id,
+            user_id=user_id,
+            trace_metadata=trace_metadata
+        )
+        
+        # Prepare response with enhanced metadata
+        response_content = triage_result.response
+        
+        # Add routing information to response
+        if triage_result.routing_decision:
+            routing_info = f"""
+            🎯 **Routing Information:**
+            - **Target Agent:** {triage_result.routing_decision.target_agent}
+            - **Confidence:** {triage_result.routing_decision.confidence:.2f}
+            - **Handoff Type:** {triage_result.routing_decision.handoff_type}
+            - **Processing Time:** {triage_result.execution_time:.2f}s
+            
+            💭 **Reasoning:** {triage_result.routing_decision.reasoning}
+            """
+            response_content += f"\n\n{routing_info}"
+        
+        # Add performance metrics
+        performance_info = f"""
+        📊 **Performance Metrics:**
+        - **Execution Time:** {triage_result.execution_time:.2f}s
+        - **Handoffs:** {len(triage_result.handoffs)}
+        - **Success:** {'✅' if triage_result.success else '❌'}
+        """
+        
+        if triage_result.trace_id:
+            performance_info += f"- **Trace ID:** {triage_result.trace_id}"
+        
+        response_content += f"\n\n{performance_info}"
+        
+        # Send enhanced response with better error handling
+        try:
+            await cl.Message(
+                content=response_content,
+                author="FreelanceX.AI Assistant",
+                metadata={
+                    "routing_decision": triage_result.routing_decision.dict() if triage_result.routing_decision else None,
+                    "handoffs": triage_result.handoffs,
+                    "execution_time": triage_result.execution_time,
+                    "trace_id": triage_result.trace_id,
+                    "success": triage_result.success,
+                    "target_agent": triage_result.routing_decision.target_agent if triage_result.routing_decision else None
+                }
+            ).send()
+            logger.info(f"Response sent successfully: {len(response_content)} characters")
+        except Exception as send_error:
+            logger.error(f"Failed to send response: {str(send_error)}")
+            # Try sending a simple response as fallback
+            await cl.Message(
+                content=f"Response: {response_content[:500]}...",
+                author="FreelanceX.AI Assistant"
+            ).send()
+        
+        # Add agent response to memory (only if session_id is valid)
+        if session_id:
+            try:
+                await memory.add_memory_entry(
+                    session_id=session_id,
+                    message_type="agent",
+                    content=response_content,
+                    user_id=user_id,
+                    agent_name=triage_result.routing_decision.target_agent if triage_result.routing_decision else "triage_agent",
+                    handoffs=triage_result.handoffs,
+                    metadata={
+                        "execution_time": triage_result.execution_time,
+                        "trace_id": triage_result.trace_id,
+                        "success": triage_result.success,
+                        "routing_decision": triage_result.routing_decision.dict() if triage_result.routing_decision else None
+                    }
+                )
+                
+                # Update session context
+                await memory.update_session_context(
+                    session_id=session_id,
+                    agent_history=triage_result.handoffs,
+                    system_state={
+                        "last_response_time": datetime.now().isoformat(),
+                        "total_messages": trace_metadata.get("message_count", 0),
+                        "last_target_agent": triage_result.routing_decision.target_agent if triage_result.routing_decision else None
+                    }
+                )
+            except Exception as memory_error:
+                logger.error(f"Memory operations failed: {str(memory_error)}")
+                # Continue without memory operations rather than failing the entire request
+        
+        # Update trace metadata
+        cl.user_session.set("trace_metadata", trace_metadata)
+        
+        logger.info(f"Enhanced message processed successfully: {session_id}")
+        
     except Exception as e:
-        # Log the error
-        logger.error(f"Error processing message: {str(e)}")
+        logger.error(f"Enhanced message processing failed: {str(e)}")
         
-        # Check for specific OpenAI Agent SDK errors
-        error_message = "I'm sorry, but I encountered an error while processing your request."
+        # Record error in memory
+        session_id = cl.user_session.get("session_id")
+        user_id = cl.user_session.get("user_id")
         
-        if "openai.error.RateLimitError" in str(e):
-            error_message = "I've hit my rate limit with OpenAI. Please try again in a moment."
-        elif "openai.error.AuthenticationError" in str(e):
-            error_message = "There's an issue with the OpenAI API authentication. Please check your API key."
-        elif "openai.error.APIError" in str(e):
-            error_message = "The OpenAI API is currently experiencing issues. Please try again later."
-        elif "openai.error.Timeout" in str(e):
-            error_message = "The request to OpenAI timed out. Please try again."
-        elif "session" in str(e).lower():
-            error_message = "There was an issue with your session. Starting a new conversation might help."
-        else:
-            error_message += " Please try again or contact support if the issue persists."
+        if session_id:
+            try:
+                await memory.add_memory_entry(
+                    session_id=session_id,
+                    message_type="error",
+                    content=f"Message processing failed: {str(e)}",
+                    user_id=user_id,
+                    agent_name="system",
+                    metadata={"error": str(e), "timestamp": datetime.now().isoformat()}
+                )
+            except Exception as memory_error:
+                logger.error(f"Failed to record error in memory: {str(memory_error)}")
         
-        # Send error message to user
+        # Send error response
         await cl.Message(
-            content=f"{error_message}\n\nError details: {str(e)}",
-            author="FreelanceX.AI"
+            content=f"❌ **Error:** {str(e)}\n\nPlease try again or contact support if the issue persists.",
+            author="System"
         ).send()
-
-async def handle_auth_flow(message: cl.Message, auth_state: str):
-    """Handle authentication flow"""
-    try:
-        if auth_state == "register_email":
-            email = message.content.strip()
-            if "@" not in email:
-                await cl.Message(content="❌ Please enter a valid email address:").send()
-                return
-            
-            cl.user_session.set("temp_email", email)
-            cl.user_session.set("auth_state", "register_password")
-            await cl.Message(content="Password:").send()
-            
-        elif auth_state == "register_password":
-            password = message.content.strip()
-            if len(password) < 6:
-                await cl.Message(content="❌ Password must be at least 6 characters. Please try again:").send()
-                return
-            
-            cl.user_session.set("temp_password", password)
-            cl.user_session.set("auth_state", "register_name")
-            await cl.Message(content="Full Name (optional):").send()
-            
-        elif auth_state == "register_name":
-            full_name = message.content.strip() or None
-            email = cl.user_session.get("temp_email")
-            password = cl.user_session.get("temp_password")
-            
-            try:
-                result = await register_user(email, password, full_name)
-                await cl.Message(content=f"✅ Registration successful! Welcome, {full_name or email}").send()
-                
-                # Auto-login after registration
-                login_result = await login_user(email, password)
-                cl.user_session.set("auth_token", login_result["access_token"])
-                cl.user_session.set("user_mode", "authenticated")
-                cl.user_session.set("auth_state", None)
-                
-                # Create session and show welcome
-                session = SQLiteSession(session_id=str(uuid4()), db_path=cfg.get_database_url().replace("sqlite:///", "") if cfg.database.type == "sqlite" else ":memory:")
-                cl.user_session.set("session", session)
-                
-                await cl.Message(content="🚀 You're all set! What would you like to work on today?").send()
-                
-            except Exception as e:
-                await cl.Message(content=f"❌ Registration failed: {str(e)}").send()
-                cl.user_session.set("auth_state", None)
-                
-        elif auth_state == "login_email":
-            email = message.content.strip()
-            if "@" not in email:
-                await cl.Message(content="❌ Please enter a valid email address:").send()
-                return
-            
-            cl.user_session.set("temp_email", email)
-            cl.user_session.set("auth_state", "login_password")
-            await cl.Message(content="Password:").send()
-            
-        elif auth_state == "login_password":
-            password = message.content.strip()
-            email = cl.user_session.get("temp_email")
-            
-            try:
-                result = await login_user(email, password)
-                cl.user_session.set("auth_token", result["access_token"])
-                cl.user_session.set("user_mode", "authenticated")
-                cl.user_session.set("auth_state", None)
-                
-                await cl.Message(content="✅ Login successful! Welcome back!").send()
-                
-                # Create session and show welcome
-                session = SQLiteSession(session_id=str(uuid4()), db_path=cfg.get_database_url().replace("sqlite:///", "") if cfg.database.type == "sqlite" else ":memory:")
-                cl.user_session.set("session", session)
-                
-                await cl.Message(content="🚀 What would you like to work on today?").send()
-                
-            except Exception as e:
-                await cl.Message(content=f"❌ Login failed: {str(e)}").send()
-                cl.user_session.set("auth_state", None)
-                
-    except Exception as e:
-        logger.error(f"Error in auth flow: {str(e)}")
-        await cl.Message(content=f"❌ Authentication error: {str(e)}").send()
-        cl.user_session.set("auth_state", None)
 
 @cl.on_chat_end
-async def end():
-    """Handle chat end"""
+async def on_chat_end():
+    """Enhanced chat end with cleanup and analytics"""
     try:
-        # Get the session
-        session = cl.user_session.get("session")
+        session_id = cl.user_session.get("session_id")
+        user_id = cl.user_session.get("user_id")
+        trace_metadata = cl.user_session.get("trace_metadata", {})
         
-        # Log session information if available
-        if session:
-            logger.info(f"Ending chat session with trace IDs: {session.trace_ids if hasattr(session, 'trace_ids') else 'None'}")
-            # Deactivate session in memory
-            await memory_manager.delete_session(session_id=str(id(session)))
-        
-        user_mode = cl.user_session.get("user_mode")
-        if user_mode == "guest":
-            await cl.Message(
-                content="👋 Thank you for using FreelanceX.AI! Since you were in guest mode, your session data has not been saved.",
-                author="FreelanceX.AI"
-            ).send()
-        else:
-            await cl.Message(
-                content="👋 Thank you for using FreelanceX.AI! Your session has been saved. Come back anytime for more freelance assistance.",
-                author="FreelanceX.AI"
-            ).send()
-        
-        logger.info("Chat session ended")
+        if session_id:
+            # Get session analytics
+            session_context = await memory.get_session_context(session_id)
+            session_memory = await memory.get_session_memory(session_id)
+            
+            # Calculate session metrics
+            total_messages = len(session_memory)
+            user_messages = len([m for m in session_memory if m.message_type == "user"])
+            agent_messages = len([m for m in session_memory if m.message_type == "agent"])
+            errors = len([m for m in session_memory if m.message_type == "error"])
+            
+            # Update session context with final metrics
+            await memory.update_session_context(
+                session_id=session_id,
+                conversation_summary=f"Session ended with {total_messages} total messages, {user_messages} user messages, {agent_messages} agent responses, and {errors} errors.",
+                system_state={
+                    "session_end_time": datetime.now().isoformat(),
+                    "total_messages": total_messages,
+                    "user_messages": user_messages,
+                    "agent_messages": agent_messages,
+                    "errors": errors,
+                    "session_duration": trace_metadata.get("session_duration", 0)
+                }
+            )
+            
+            logger.info(f"Enhanced chat session ended: {session_id} - {total_messages} messages processed")
         
     except Exception as e:
-        logger.error(f"Error in chat end: {str(e)}")
+        logger.error(f"Failed to end enhanced chat session: {str(e)}")
 
-if __name__ == "__main__":
-    pass  # This will be handled by Chainlit
+# Enhanced configuration
+def get_enhanced_config() -> Dict[str, Any]:
+    """Get enhanced configuration with SDK features"""
+    config = get_config()
+    
+    enhanced_config = {
+        **config.dict(),
+        "sdk_features": {
+            "tracing_enabled": True,
+            "memory_integration": True,
+            "handoffs_enabled": True,
+            "guardrails_enabled": True,
+            "performance_monitoring": True
+        },
+        "chainlit_config": {
+            "session_management": "enhanced",
+            "memory_persistence": True,
+            "tracing_integration": True,
+            "agent_coordination": "dynamic"
+        }
+    }
+    
+    return enhanced_config
+
+# Enhanced utilities
+async def get_session_analytics(session_id: str) -> Dict[str, Any]:
+    """Get enhanced session analytics"""
+    try:
+        session_context = await memory.get_session_context(session_id)
+        session_memory = await memory.get_session_memory(session_id)
+        
+        if not session_context:
+            return {"error": "Session not found"}
+        
+        # Calculate analytics
+        total_messages = len(session_memory)
+        user_messages = len([m for m in session_memory if m.message_type == "user"])
+        agent_messages = len([m for m in session_memory if m.message_type == "agent"])
+        errors = len([m for m in session_memory if m.message_type == "error"])
+        
+        # Calculate average response time
+        response_times = []
+        for i, entry in enumerate(session_memory):
+            if entry.message_type == "agent" and i > 0:
+                prev_entry = session_memory[i-1]
+                if prev_entry.message_type == "user":
+                    time_diff = (entry.timestamp - prev_entry.timestamp).total_seconds()
+                    response_times.append(time_diff)
+        
+        avg_response_time = sum(response_times) / len(response_times) if response_times else 0
+        
+        return {
+            "session_id": session_id,
+            "total_messages": total_messages,
+            "user_messages": user_messages,
+            "agent_messages": agent_messages,
+            "errors": errors,
+            "average_response_time": avg_response_time,
+            "session_duration": (session_context.last_activity - session_context.created_at).total_seconds(),
+            "agent_history": session_context.agent_history,
+            "success_rate": (agent_messages / user_messages) if user_messages > 0 else 0
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get session analytics: {str(e)}")
+        return {"error": str(e)}
+
+async def get_user_profile(user_id: str) -> Dict[str, Any]:
+    """Get enhanced user profile"""
+    try:
+        profile = await memory.get_user_profile(user_id)
+        if profile:
+            return profile
+        else:
+            return {
+                "user_id": user_id,
+                "preferences": {},
+                "behavior_patterns": {},
+                "expertise_areas": [],
+                "communication_style": "professional",
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }
+    except Exception as e:
+        logger.error(f"Failed to get user profile: {str(e)}")
+        return {"error": str(e)}

@@ -47,6 +47,19 @@ opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-asgi
 opentelemetry-exporter-otlp
 
+# Testing framework
+pytest
+pytest-asyncio
+pytest-mock
+pytest-cov
+
+# Enhanced tooling and monitoring
+structlog  # Structured logging
+tenacity  # Retry logic
+httpx  # Modern HTTP client
+websockets  # WebSocket support for MCP
+asyncio-mqtt  # MQTT support for IoT integrations
+
 # Optional: Advanced features
 scipy  # For advanced math
 matplotlib  # For charts

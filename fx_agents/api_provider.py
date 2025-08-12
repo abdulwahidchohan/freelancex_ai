@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-FreelanceX.AI API Provider Abstraction Layer
-Supports OpenAI and Google Gemini APIs with automatic fallback
+FreelanceX.AI Enhanced API Provider Abstraction Layer
+Dynamic multi-provider support with OpenAI and Google Gemini APIs and automatic fallback
 """
 
 import os
 import logging
-from typing import Dict, Any, Optional, List
+import asyncio
+from typing import Dict, Any, Optional, List, Type
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 import json
+from config.settings import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +20,14 @@ class APIProvider(Enum):
     """Supported API providers"""
     OPENAI = "openai"
     GEMINI = "gemini"
+    ANTHROPIC = "anthropic"
 
 @dataclass
 class ChatMessage:
     """Standardized chat message format"""
     role: str  # "system", "user", "assistant"
     content: str
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class ChatCompletionRequest:
@@ -33,6 +37,7 @@ class ChatCompletionRequest:
     temperature: float = 0.7
     max_tokens: Optional[int] = None
     stream: bool = False
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class ChatCompletionResponse:
@@ -41,14 +46,40 @@ class ChatCompletionResponse:
     model: str
     usage: Optional[Dict[str, Any]] = None
     finish_reason: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+@dataclass
+class ProviderConfig:
+    """Configuration for API providers"""
+    name: str
+    api_key: str
+    model: str
+    enabled: bool = True
+    priority: int = 1
+    retry_attempts: int = 3
+    timeout: float = 30.0
+    custom_config: Dict[str, Any] = field(default_factory=dict)
 
 class BaseAPIProvider(ABC):
     """Abstract base class for API providers"""
     
-    def __init__(self, api_key: str, model: str = None):
-        self.api_key = api_key
-        self.model = model
-        self.provider_name = self.__class__.__name__
+    def __init__(self, config: ProviderConfig):
+        self.config = config
+        self.provider_name = config.name
+        self.api_key = config.api_key
+        self.model = config.model
+        self.enabled = config.enabled
+        self.priority = config.priority
+        self.retry_attempts = config.retry_attempts
+        self.timeout = config.timeout
+        
+        # Initialize provider-specific client
+        self._initialize_client()
+    
+    @abstractmethod
+    def _initialize_client(self):
+        """Initialize the provider-specific client"""
+        pass
     
     @abstractmethod
     async def chat_completion(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
@@ -63,27 +94,53 @@ class BaseAPIProvider(ABC):
     def get_model_name(self) -> str:
         """Get the model name for this provider"""
         return self.model
+    
+    async def test_connection(self) -> Dict[str, Any]:
+        """Test the provider connection"""
+        try:
+            test_request = ChatCompletionRequest(
+                messages=[ChatMessage(role="user", content="Hello")],
+                model=self.model,
+                max_tokens=10
+            )
+            response = await self.chat_completion(test_request)
+            return {
+                "success": True,
+                "provider": self.provider_name,
+                "model": self.model,
+                "response_time": getattr(response, 'response_time', None)
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "provider": self.provider_name,
+                "error": str(e)
+            }
 
 class OpenAIProvider(BaseAPIProvider):
     """OpenAI API provider implementation"""
     
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
-        super().__init__(api_key, model)
+    def _initialize_client(self):
+        """Initialize OpenAI client"""
         try:
             from openai import OpenAI
-            self.client = OpenAI(api_key=api_key)
+            self.client = OpenAI(api_key=self.api_key)
+            logger.info(f"OpenAI client initialized for {self.provider_name}")
         except ImportError:
             self.client = None
             logger.error("OpenAI client not available. Install with: pip install openai")
+        except Exception as e:
+            self.client = None
+            logger.error(f"Failed to initialize OpenAI client: {str(e)}")
     
     def is_available(self) -> bool:
         """Check if OpenAI API is available"""
-        return self.api_key and self.client is not None
+        return self.api_key and self.client is not None and self.enabled
     
     async def chat_completion(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
         """Generate chat completion using OpenAI API"""
         if not self.is_available():
-            raise ValueError("OpenAI API not available")
+            raise ValueError(f"OpenAI API not available for {self.provider_name}")
         
         try:
             # Convert to OpenAI format
@@ -98,182 +155,252 @@ class OpenAIProvider(BaseAPIProvider):
             )
             
             return ChatCompletionResponse(
-                content=response.choices[0].message.content,
+                content=response.choices[0].message.content or "",
                 model=response.model,
-                usage=response.usage.dict() if response.usage else None,
-                finish_reason=response.choices[0].finish_reason
+                usage=response.usage.model_dump() if response.usage else None,
+                finish_reason=response.choices[0].finish_reason,
+                metadata={
+                    "provider": "openai",
+                    "model": response.model,
+                    "usage": response.usage.model_dump() if response.usage else {}
+                }
             )
             
         except Exception as e:
-            logger.error(f"OpenAI API error: {str(e)}")
+            logger.error(f"OpenAI API error for {self.provider_name}: {str(e)}")
             raise
 
 class GeminiProvider(BaseAPIProvider):
     """Google Gemini API provider implementation"""
     
-    def __init__(self, api_key: str, model: str = "gemini-1.5-flash"):
-        super().__init__(api_key, model)
+    def _initialize_client(self):
+        """Initialize Gemini client"""
         try:
             import google.generativeai as genai
-            genai.configure(api_key=api_key)
-            self.client = genai.GenerativeModel(model)
+            genai.configure(api_key=self.api_key)
+            self.client = genai
+            logger.info(f"Gemini client initialized for {self.provider_name}")
         except ImportError:
             self.client = None
-            logger.error("Google Generative AI client not available. Install with: pip install google-generativeai")
+            logger.error("Google Generative AI not available. Install with: pip install google-generativeai")
+        except Exception as e:
+            self.client = None
+            logger.error(f"Failed to initialize Gemini client: {str(e)}")
     
     def is_available(self) -> bool:
         """Check if Gemini API is available"""
-        return self.api_key and self.client is not None
+        return self.api_key and self.client is not None and self.enabled
     
     async def chat_completion(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
         """Generate chat completion using Gemini API"""
         if not self.is_available():
-            raise ValueError("Gemini API not available")
+            raise ValueError(f"Gemini API not available for {self.provider_name}")
         
         try:
-            # Convert to Gemini format
-            # Gemini doesn't have a direct chat completion API like OpenAI
-            # We'll use the generate_content method with conversation history
+            # Convert messages to Gemini format
+            gemini_messages = []
+            for msg in request.messages:
+                if msg.role == "system":
+                    # Gemini doesn't have system messages, prepend to first user message
+                    if gemini_messages and gemini_messages[-1]["role"] == "user":
+                        gemini_messages[-1]["parts"] = [f"{msg.content}\n\n{gemini_messages[-1]['parts'][0]}"]
+                    else:
+                        gemini_messages.append({"role": "user", "parts": [msg.content]})
+                else:
+                    gemini_messages.append({
+                        "role": msg.role,
+                        "parts": [msg.content]
+                    })
             
-            # Extract the last user message and build context from previous messages
-            user_messages = [msg.content for msg in request.messages if msg.role == "user"]
-            system_messages = [msg.content for msg in request.messages if msg.role == "system"]
+            # Create model
+            model = self.client.GenerativeModel(self.model)
             
-            # Combine system messages into a single prompt
-            system_prompt = "\n".join(system_messages) if system_messages else ""
-            
-            # Get the last user message
-            user_message = user_messages[-1] if user_messages else ""
-            
-            # Build the full prompt
-            full_prompt = f"{system_prompt}\n\nUser: {user_message}" if system_prompt else user_message
-            
-            response = self.client.generate_content(
-                full_prompt,
-                generation_config={
-                    "temperature": request.temperature,
-                    "max_output_tokens": request.max_tokens or 2048,
-                }
+            # Generate response
+            response = await asyncio.to_thread(
+                model.generate_content,
+                gemini_messages,
+                generation_config=self.client.types.GenerationConfig(
+                    temperature=request.temperature,
+                    max_output_tokens=request.max_tokens
+                )
             )
             
             return ChatCompletionResponse(
-                content=response.text,
+                content=response.text or "",
                 model=self.model,
-                usage=None,  # Gemini doesn't provide usage info in the same format
-                finish_reason="stop"
+                finish_reason="stop",
+                metadata={
+                    "provider": "gemini",
+                    "model": self.model,
+                    "usage": {
+                        "prompt_tokens": getattr(response, 'usage_metadata', {}).get('prompt_token_count', 0),
+                        "completion_tokens": getattr(response, 'usage_metadata', {}).get('candidates_token_count', 0)
+                    }
+                }
             )
             
         except Exception as e:
-            logger.error(f"Gemini API error: {str(e)}")
+            logger.error(f"Gemini API error for {self.provider_name}: {str(e)}")
             raise
 
 class APIManager:
-    """Manages multiple API providers with fallback functionality"""
+    """Enhanced API manager with dynamic provider management"""
     
-    def __init__(self, config):
-        """Initialize API manager with configuration"""
-        self.config = config
+    def __init__(self, config=None):
+        self.config = config or get_config()
         self.providers: Dict[APIProvider, BaseAPIProvider] = {}
-        self.primary_provider = APIProvider(config.external_integrations.primary_api_provider)
-        self.fallback_provider = APIProvider(config.external_integrations.fallback_api_provider)
-        self.enable_fallback = config.external_integrations.enable_api_fallback
-        # Init cache
-        from .cache import Cache
-        self.cache = Cache(getattr(config.external_integrations, "redis_url", ""))
-        
-        # Initialize providers
+        self.provider_configs: Dict[str, ProviderConfig] = {}
         self._initialize_providers()
-        self._last_cache_hit: bool = False
     
     def _initialize_providers(self):
-        """Initialize available API providers"""
-        # Initialize OpenAI provider
-        if self.config.external_integrations.openai_api_key:
-            self.providers[APIProvider.OPENAI] = OpenAIProvider(
-                api_key=self.config.external_integrations.openai_api_key,
-                model=self.config.agents.default_model
-            )
-        
-        # Initialize Gemini provider
-        if self.config.external_integrations.google_gemini_api_key:
-            self.providers[APIProvider.GEMINI] = GeminiProvider(
-                api_key=self.config.external_integrations.google_gemini_api_key,
-                model="gemini-1.5-flash"  # Use a good default for Gemini
-            )
-        
-        logger.info(f"Initialized providers: {list(self.providers.keys())}")
+        """Dynamically initialize all configured providers"""
+        try:
+            # Load provider configurations
+            self._load_provider_configs()
+            
+            # Initialize providers
+            provider_classes = {
+                APIProvider.OPENAI: OpenAIProvider,
+                APIProvider.GEMINI: GeminiProvider,
+            }
+            
+            for provider_enum, provider_class in provider_classes.items():
+                config = self.provider_configs.get(provider_enum.value)
+                if config and config.enabled:
+                    try:
+                        provider = provider_class(config)
+                        if provider.is_available():
+                            self.providers[provider_enum] = provider
+                            logger.info(f"Initialized {provider_enum.value} provider: {config.name}")
+                    except Exception as e:
+                        logger.error(f"Failed to initialize {provider_enum.value} provider: {str(e)}")
+            
+            logger.info(f"API Manager initialized with {len(self.providers)} providers")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize API providers: {str(e)}")
+            raise
+    
+    def _load_provider_configs(self):
+        """Load provider configurations from settings"""
+        try:
+            # OpenAI configuration
+            if self.config.api.openai_api_key:
+                self.provider_configs[APIProvider.OPENAI.value] = ProviderConfig(
+                    name="OpenAI",
+                    api_key=self.config.api.openai_api_key,
+                    model=self.config.agents.default_model or "gpt-4o-mini",
+                    enabled=True,
+                    priority=1,  # Default to OpenAI as primary
+                    retry_attempts=3,
+                    timeout=30.0
+                )
+            
+            # Gemini configuration
+            if self.config.api.google_api_key:
+                self.provider_configs[APIProvider.GEMINI.value] = ProviderConfig(
+                    name="Google Gemini",
+                    api_key=self.config.api.google_api_key,
+                    model="gemini-pro",
+                    enabled=True,
+                    priority=2,  # Secondary priority
+                    retry_attempts=3,
+                    timeout=30.0
+                )
+            
+            # Anthropic configuration (future support)
+            if self.config.api.anthropic_api_key:
+                self.provider_configs[APIProvider.ANTHROPIC.value] = ProviderConfig(
+                    name="Anthropic",
+                    api_key=self.config.api.anthropic_api_key,
+                    model="claude-3-sonnet-20240229",
+                    enabled=False,  # Not implemented yet
+                    priority=3,
+                    retry_attempts=3,
+                    timeout=30.0
+                )
+                
+        except Exception as e:
+            logger.error(f"Failed to load provider configurations: {str(e)}")
+            raise
     
     def get_available_providers(self) -> List[BaseAPIProvider]:
-        """Get list of available and configured providers"""
-        return [provider for provider in self.providers.values() if provider.is_available()]
+        """Get list of available providers"""
+        return list(self.providers.values())
     
     async def chat_completion(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
-        """Generate chat completion with fallback support"""
-        # Cache key from model + last messages
-        try:
-            last = request.messages[-1].content if request.messages else ""
-            sys = "\n".join([m.content for m in request.messages if m.role == "system"]) if request.messages else ""
-            key = self.cache.make_key("cc", (request.model or ""), last[:256], sys[:256])
-            cached = self.cache.get(key)
-            if cached:
-                self._last_cache_hit = True
-                data = json.loads(cached)
-                return ChatCompletionResponse(**data)
-        except Exception:
-            key = None
-        self._last_cache_hit = False
-        # Try primary provider first
-        primary = self.providers.get(self.primary_provider)
-        if primary and primary.is_available():
+        """Get chat completion with automatic fallback"""
+        errors = []
+        
+        # Sort providers by priority
+        sorted_providers = sorted(
+            self.providers.items(),
+            key=lambda x: x[1].priority
+        )
+        
+        for provider_enum, provider in sorted_providers:
             try:
-                logger.info(f"Using primary provider: {self.primary_provider.value}")
-                resp = await primary.chat_completion(request)
-                if key:
-                    try:
-                        self.cache.set(key, json.dumps(resp.__dict__), ttl_seconds=600)
-                    except Exception:
-                        pass
-                return resp
+                logger.debug(f"Trying {provider.provider_name} for chat completion")
+                response = await provider.chat_completion(request)
+                logger.info(f"Successfully used {provider.provider_name}")
+                return response
+                
             except Exception as e:
-                logger.warning(f"Primary provider failed: {str(e)}")
-                if not self.enable_fallback:
-                    raise
+                error_msg = f"{provider.provider_name}: {str(e)}"
+                errors.append(error_msg)
+                logger.warning(f"Provider {provider.provider_name} failed: {str(e)}")
+                continue
         
-        # Try fallback provider
-        fallback = self.providers.get(self.fallback_provider)
-        if fallback and fallback.is_available():
-            try:
-                logger.info(f"Using fallback provider: {self.fallback_provider.value}")
-                resp = await fallback.chat_completion(request)
-                if key:
-                    try:
-                        self.cache.set(key, json.dumps(resp.__dict__), ttl_seconds=600)
-                    except Exception:
-                        pass
-                return resp
-            except Exception as e:
-                logger.error(f"Fallback provider also failed: {str(e)}")
-        
-        # If both fail, try any available provider
-        for provider_name, provider in self.providers.items():
-            if provider.is_available() and provider_name not in [self.primary_provider, self.fallback_provider]:
-                try:
-                    logger.info(f"Using alternative provider: {provider_name.value}")
-                    resp = await provider.chat_completion(request)
-                    if key:
-                        try:
-                            self.cache.set(key, json.dumps(resp.__dict__), ttl_seconds=600)
-                        except Exception:
-                            pass
-                    return resp
-                except Exception as e:
-                    logger.warning(f"Alternative provider failed: {str(e)}")
-                    continue
-        
-        raise RuntimeError("No API providers available")
+        # All providers failed
+        error_summary = "; ".join(errors)
+        raise Exception(f"All API providers failed: {error_summary}")
 
-    def was_last_cache_hit(self) -> bool:
-        return self._last_cache_hit
+    def get_provider_status(self) -> Dict[str, Any]:
+        """Get status of all providers"""
+        status = {}
+        for provider_enum, provider in self.providers.items():
+            status[provider_enum.value] = {
+                "name": provider.provider_name,
+                "available": provider.is_available(),
+                "model": provider.model,
+                "priority": provider.priority,
+                "enabled": provider.enabled
+            }
+        return status
+    
+    async def test_all_providers(self) -> Dict[str, Any]:
+        """Test all available providers"""
+        results = {}
+        for provider_enum, provider in self.providers.items():
+            results[provider_enum.value] = await provider.test_connection()
+        return results
+    
+    def add_provider(self, provider_enum: APIProvider, provider: BaseAPIProvider):
+        """Dynamically add a provider"""
+        self.providers[provider_enum] = provider
+        logger.info(f"Added provider: {provider.provider_name}")
+    
+    def remove_provider(self, provider_enum: APIProvider):
+        """Remove a provider"""
+        if provider_enum in self.providers:
+            provider_name = self.providers[provider_enum].provider_name
+            del self.providers[provider_enum]
+            logger.info(f"Removed provider: {provider_name}")
+
+# Global API manager instance
+_api_manager: Optional[APIManager] = None
+
+def get_api_manager(config=None) -> APIManager:
+    """Get or create the global API manager instance"""
+    global _api_manager
+    if _api_manager is None:
+        _api_manager = APIManager(config)
+    return _api_manager
+
+def reset_api_manager():
+    """Reset the global API manager instance"""
+    global _api_manager
+    _api_manager = None
 
 # Global API manager instance
 _api_manager = None

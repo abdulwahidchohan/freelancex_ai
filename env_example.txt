@@ -1,0 +1,26 @@
+# FreelanceX.AI Environment Configuration
+# Copy this file to .env and fill in your actual API keys
+
+# OpenAI API Configuration
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Google AI (Gemini) API Configuration  
+GOOGLE_API_KEY=your_google_api_key_here
+
+# Anthropic API Configuration
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# Application Configuration
+FREELANCEX_ENV=development
+FREELANCEX_DEBUG=true
+FREELANCEX_LOG_LEVEL=INFO
+
+# Database Configuration
+FREELANCEX_DATABASE_URL=sqlite:///freelancex.db
+
+# Security Configuration
+FREELANCEX_SESSION_SECRET=your_session_secret_here
+
+# Monitoring Configuration
+FREELANCEX_ENABLE_METRICS=true
+FREELANCEX_ENABLE_TRACING=true

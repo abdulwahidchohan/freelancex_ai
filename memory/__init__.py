@@ -1,8 +1,14 @@
+# FreelanceX.AI Memory Package
 """
-FreelanceX.AI Memory Package
-Memory management and data persistence
+Enhanced Memory Management for FreelanceX.AI with OpenAI Agents SDK Integration
 """
 
-from .sqlite_memory import SQLiteMemoryManager as MemoryManager
+__version__ = "2.0.0"
 
-__all__ = ['MemoryManager'] 
+# Import main components
+from .sqlite_memory import get_memory, create_enhanced_session
+
+__all__ = [
+    "get_memory",
+    "create_enhanced_session"
+] 

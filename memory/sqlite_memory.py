@@ -1,639 +1,443 @@
 #!/usr/bin/env python3
-"""
-FreelanceX.AI SQLite Memory Management System
-Persistent memory storage using SQLite with OpenAI Agent SDK integration
+"""Enhanced Memory Management - OpenAI Agents SDK Integration
+Provides enhanced memory management with full SDK Session integration
 """
 
-import os
-import json
 import logging
+import sqlite3
+import json
 import asyncio
-import aiosqlite
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, Any, List, Optional, Union
 from datetime import datetime, timedelta
-from dataclasses import dataclass, asdict
-from openai import OpenAI
+from pydantic import BaseModel, Field
+from agents import Session, SQLiteSession
+import aiosqlite
 
-# Use SDK Session protocol types for typing only, we will persist minimal metadata
-try:  # pragma: no cover
-    from agents.memory import Session as AgentSessionProtocol
-except Exception:  # pragma: no cover
-    from typing import Protocol as AgentSessionProtocol  # type: ignore
-
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-@dataclass
-class MemoryEntry:
-    """Represents a memory entry in the system"""
-    id: str
-    user_id: str
-    agent_name: str
-    content: str
-    memory_type: str
-    importance: float
-    created_at: datetime
-    last_accessed: datetime
-    access_count: int
-    metadata: Dict[str, Any]
-    tags: List[str]
-    context: str
-    is_active: bool = True
+# Try to import set_trace_metadata, use a dummy function if not available
+try:
+    from agents import set_trace_metadata
+except ImportError:
+    def set_trace_metadata(metadata: Dict[str, Any]) -> None:
+        """Dummy function for trace metadata when not available"""
+        logger.info(f"Trace metadata (not available): {metadata}")
+        pass
 
-class SQLiteMemoryManager:
-    """
-    SQLite-based memory management system
-    Integrates with OpenAI Agent SDK sessions for enhanced memory management
-    """
+class MemoryEntry(BaseModel):
+    """Enhanced memory entry with SDK integration"""
+    session_id: str = Field(..., description="Session identifier")
+    user_id: Optional[str] = Field(default=None, description="User identifier")
+    message_type: str = Field(..., description="Type of message")
+    content: str = Field(..., description="Message content")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
+    timestamp: datetime = Field(default_factory=datetime.now, description="Timestamp")
+    agent_name: Optional[str] = Field(default=None, description="Agent name")
+    tool_calls: Optional[List[Dict[str, Any]]] = Field(default=None, description="Tool calls")
+    handoffs: Optional[List[Dict[str, Any]]] = Field(default=None, description="Handoffs")
+
+class SessionContext(BaseModel):
+    """Enhanced session context with SDK features"""
+    session_id: str = Field(..., description="Session identifier")
+    user_id: Optional[str] = Field(default=None, description="User identifier")
+    created_at: datetime = Field(default_factory=datetime.now, description="Creation timestamp")
+    last_activity: datetime = Field(default_factory=datetime.now, description="Last activity")
+    agent_history: List[str] = Field(default_factory=list, description="Agent interaction history")
+    conversation_summary: Optional[str] = Field(default=None, description="Conversation summary")
+    user_preferences: Optional[Dict[str, Any]] = Field(default=None, description="User preferences")
+    system_state: Optional[Dict[str, Any]] = Field(default=None, description="System state")
+    trace_metadata: Optional[Dict[str, Any]] = Field(default=None, description="Trace metadata")
+
+class EnhancedSQLiteMemory:
+    """Enhanced SQLite memory with full OpenAI Agents SDK integration"""
     
-    def __init__(self, db_path: str = "memory.db"):
+    def __init__(self, db_path: str = "freelancex.db"):
         self.db_path = db_path
-        self.initialized = False
-        
-        # OpenAI Agent SDK session storage
-        self.active_sessions: Dict[str, AgentSessionProtocol] = {}
-        
-        # Memory cache for performance
-        self.memory_cache: Dict[str, MemoryEntry] = {}
-        self.cache_size = 1000
-        self.cache_ttl = timedelta(hours=1)
-        
-        logger.info(f"SQLiteMemoryManager initialized with database: {db_path}")
-        
-    async def initialize(self):
-        """Initialize the database and create tables"""
-        if self.initialized:
-            return
-            
+        self.connection = None
+        self._init_database()
+    
+    def _init_database(self):
+        """Initialize database with enhanced schema"""
         try:
-            async with aiosqlite.connect(self.db_path) as db:
-                # Create memory entries table
-                await db.execute("""
-                    CREATE TABLE IF NOT EXISTS memory_entries (
-                        id TEXT PRIMARY KEY,
-                        user_id TEXT NOT NULL,
-                        agent_name TEXT NOT NULL,
-                        content TEXT NOT NULL,
-                        memory_type TEXT NOT NULL,
-                        bucket TEXT NOT NULL DEFAULT 'short',
-                        importance REAL DEFAULT 0.5,
-                        created_at TEXT NOT NULL,
-                        last_accessed TEXT NOT NULL,
-                        access_count INTEGER DEFAULT 0,
-                        metadata TEXT,
-                        tags TEXT,
-                        context TEXT,
-                        is_active INTEGER DEFAULT 1
-                    )
-                """)
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
             
-                # Create user profiles table
-                await db.execute("""
-                    CREATE TABLE IF NOT EXISTS user_profiles (
-                        user_id TEXT PRIMARY KEY,
-                        name TEXT,
-                        email TEXT,
-                        preferences TEXT,
-                        created_at TEXT NOT NULL,
-                        last_updated TEXT NOT NULL,
-                        is_active INTEGER DEFAULT 1
-                    )
-                """)
+            # Enhanced memory entries table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS memory_entries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    user_id TEXT,
+                    message_type TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    metadata TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    agent_name TEXT,
+                    tool_calls TEXT,
+                    handoffs TEXT
+                )
+            ''')
             
-                # Create agent sessions table
-                await db.execute("""
-                    CREATE TABLE IF NOT EXISTS agent_sessions (
-                        session_id TEXT PRIMARY KEY,
-                        user_id TEXT NOT NULL,
-                        agent_name TEXT NOT NULL,
-                        session_data TEXT NOT NULL,
-                        created_at TEXT NOT NULL,
-                        last_accessed TEXT NOT NULL,
-                        is_active INTEGER DEFAULT 1
-                    )
-                """)
+            # Enhanced session contexts table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS session_contexts (
+                    session_id TEXT PRIMARY KEY,
+                    user_id TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    last_activity DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    agent_history TEXT,
+                    conversation_summary TEXT,
+                    user_preferences TEXT,
+                    system_state TEXT,
+                    trace_metadata TEXT
+                )
+            ''')
             
-            # Create indexes for better performance
-                await db.execute("CREATE INDEX IF NOT EXISTS idx_memory_user_agent ON memory_entries(user_id, agent_name)")
-                await db.execute("CREATE INDEX IF NOT EXISTS idx_memory_type_importance ON memory_entries(memory_type, importance)")
-                await db.execute("CREATE INDEX IF NOT EXISTS idx_memory_last_accessed ON memory_entries(last_accessed)")
-                await db.execute("CREATE INDEX IF NOT EXISTS idx_agent_sessions_user_id ON agent_sessions(user_id)")
-                await db.execute("CREATE INDEX IF NOT EXISTS idx_agent_sessions_agent_name ON agent_sessions(agent_name)")
-                
-                await db.commit()
-                
-            self.initialized = True
-            logger.info("✅ Database initialized successfully")
+            # Enhanced user profiles table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_profiles (
+                    user_id TEXT PRIMARY KEY,
+                    preferences TEXT,
+                    behavior_patterns TEXT,
+                    expertise_areas TEXT,
+                    communication_style TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Enhanced agent performance table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS agent_performance (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    agent_name TEXT NOT NULL,
+                    session_id TEXT NOT NULL,
+                    execution_time REAL,
+                    success_rate REAL,
+                    tool_calls_count INTEGER,
+                    handoffs_count INTEGER,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Create indexes
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_memory_session_timestamp ON memory_entries(session_id, timestamp)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_session_user_activity ON session_contexts(user_id, last_activity)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_profiles_id ON user_profiles(user_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_agent_performance_name_session ON agent_performance(agent_name, session_id, timestamp)')
+            
+            conn.commit()
+            conn.close()
+            logger.info("Enhanced database schema initialized successfully")
             
         except Exception as e:
             logger.error(f"Failed to initialize database: {str(e)}")
             raise
     
-    async def store_memory(self, 
-                          user_id: str, 
-                          agent_name: str, 
-                          content: str, 
-                          memory_type: str = "general",
-                          bucket: str = "short",
-                          importance: float = 0.5,
-                          metadata: Dict[str, Any] = None,
-                          tags: List[str] = None,
-                          context: str = "") -> str:
-        """
-        Store a new memory entry
-        
-        Args:
-            user_id: User identifier
-            agent_name: Name of the agent that created the memory
-            content: Memory content
-            memory_type: Type of memory (general, task, conversation, etc.)
-            importance: Importance score (0.0 to 1.0)
-            metadata: Additional metadata
-            tags: Tags for categorization
-            context: Context information
-            
-        Returns:
-            str: Memory entry ID
-        """
-        await self.initialize()
-        
-        memory_id = f"mem_{user_id}_{agent_name}_{datetime.now().timestamp()}"
-        now = datetime.now().isoformat()
-        
-        memory_entry = MemoryEntry(
-            id=memory_id,
-            user_id=user_id,
-            agent_name=agent_name,
-            content=content,
-            memory_type=memory_type,
-            importance=importance,
-            created_at=datetime.now(),
-            last_accessed=datetime.now(),
-            access_count=0,
-            metadata=metadata or {},
-            tags=tags or [],
-            context=context
-        )
-        
+    async def add_memory_entry(self, session_id: str, message_type: str, content: str, 
+                              user_id: Optional[str] = None, agent_name: Optional[str] = None,
+                              tool_calls: Optional[List[Dict[str, Any]]] = None,
+                              handoffs: Optional[List[Dict[str, Any]]] = None,
+                              metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Add memory entry with SDK integration"""
         try:
-            async with aiosqlite.connect(self.db_path) as db:
-                await db.execute("""
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute('''
                     INSERT INTO memory_entries 
-                    (id, user_id, agent_name, content, memory_type, bucket, importance, 
-                     created_at, last_accessed, access_count, metadata, tags, context, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    memory_id, user_id, agent_name, content, memory_type, bucket, importance,
-                    now, now, 0, json.dumps(metadata or {}), json.dumps(tags or []), context, True
+                    (session_id, user_id, message_type, content, metadata, agent_name, tool_calls, handoffs)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    session_id, user_id, message_type, content,
+                    json.dumps(metadata) if metadata else None,
+                    agent_name,
+                    json.dumps(tool_calls) if tool_calls else None,
+                    json.dumps(handoffs) if handoffs else None
                 ))
-                await db.commit()
+                await conn.commit()
+                logger.debug(f"Added memory entry for session {session_id}")
                 
-            # Add to cache
-            self.memory_cache[memory_id] = memory_entry
-            
-            logger.info(f"Stored memory entry: {memory_id}")
-            return memory_id
-            
         except Exception as e:
-            logger.error(f"Failed to store memory: {str(e)}")
+            logger.error(f"Failed to add memory entry: {str(e)}")
             raise
     
-    async def retrieve_memory(self, 
-                             user_id: str, 
-                             agent_name: str = None,
-                             memory_type: str = None,
-                              bucket: str = None,
-                             limit: int = 10,
-                             min_importance: float = 0.0) -> List[MemoryEntry]:
-        """
-        Retrieve memory entries based on criteria
-        
-        Args:
-            user_id: User identifier
-            agent_name: Filter by agent name (optional)
-            memory_type: Filter by memory type (optional)
-            limit: Maximum number of entries to return
-            min_importance: Minimum importance threshold
-            
-        Returns:
-            List[MemoryEntry]: List of memory entries
-        """
-        await self.initialize()
-        
+    async def get_session_memory(self, session_id: str, limit: int = 50) -> List[MemoryEntry]:
+        """Get session memory entries"""
         try:
-            async with aiosqlite.connect(self.db_path) as db:
-                query = """
-                    SELECT id, user_id, agent_name, content, memory_type, importance,
-                           created_at, last_accessed, access_count, metadata, tags, context, is_active
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute('''
+                    SELECT session_id, user_id, message_type, content, metadata, 
+                           timestamp, agent_name, tool_calls, handoffs
                     FROM memory_entries 
-                    WHERE user_id = ? AND is_active = 1 AND importance >= ?
-                """
-                params = [user_id, min_importance]
+                    WHERE session_id = ? 
+                    ORDER BY timestamp DESC 
+                    LIMIT ?
+                ''', (session_id, limit))
                 
-                if agent_name:
-                    query += " AND agent_name = ?"
-                    params.append(agent_name)
-                    
-                if memory_type:
-                    query += " AND memory_type = ?"
-                    params.append(memory_type)
-                if bucket:
-                    query += " AND bucket = ?"
-                    params.append(bucket)
-                    
-                query += " ORDER BY importance DESC, last_accessed DESC LIMIT ?"
-                params.append(limit)
-                
-                async with db.execute(query, params) as cursor:
-                    rows = await cursor.fetchall()
-                    
+                rows = await cursor.fetchall()
                 memory_entries = []
-                for row in rows:
-                    memory_entry = MemoryEntry(
-                        id=row[0],
-                        user_id=row[1],
-                        agent_name=row[2],
-                        content=row[3],
-                        memory_type=row[4],
-                        importance=row[5],
-                        created_at=datetime.fromisoformat(row[6]),
-                        last_accessed=datetime.fromisoformat(row[7]),
-                        access_count=row[8],
-                        metadata=json.loads(row[9]),
-                        tags=json.loads(row[10]),
-                        context=row[11],
-                        is_active=bool(row[12])
-                    )
-                    memory_entries.append(memory_entry)
-                    
-                    # Update cache
-                    self.memory_cache[memory_entry.id] = memory_entry
                 
-                # Update access count and last accessed
-                if memory_entries:
-                    await self._update_access_stats([entry.id for entry in memory_entries])
+                for row in rows:
+                    entry = MemoryEntry(
+                        session_id=row[0],
+                        user_id=row[1],
+                        message_type=row[2],
+                        content=row[3],
+                        metadata=json.loads(row[4]) if row[4] else None,
+                        timestamp=datetime.fromisoformat(row[5]),
+                        agent_name=row[6],
+                        tool_calls=json.loads(row[7]) if row[7] else None,
+                        handoffs=json.loads(row[8]) if row[8] else None
+                    )
+                    memory_entries.append(entry)
                 
                 return memory_entries
                 
         except Exception as e:
-            logger.error(f"Failed to retrieve memory: {str(e)}")
+            logger.error(f"Failed to get session memory: {str(e)}")
             return []
     
-    async def search_memory(self, 
-                           user_id: str, 
-                           query: str, 
-                           limit: int = 10) -> List[MemoryEntry]:
-        """
-        Search memory entries using text search
-        
-        Args:
-            user_id: User identifier
-            query: Search query
-            limit: Maximum number of results
-            
-        Returns:
-            List[MemoryEntry]: List of matching memory entries
-        """
-        await self.initialize()
-        
+    async def create_session(self, session_id: str, user_id: Optional[str] = None,
+                           agent_history: Optional[List[str]] = None,
+                           user_preferences: Optional[Dict[str, Any]] = None,
+                           system_state: Optional[Dict[str, Any]] = None,
+                           trace_metadata: Optional[Dict[str, Any]] = None) -> SessionContext:
+        """Create session context with SDK integration"""
         try:
-            async with aiosqlite.connect(self.db_path) as db:
-                # Simple text search - could be enhanced with full-text search
-                search_query = f"%{query}%"
-                
-                async with db.execute("""
-                    SELECT id, user_id, agent_name, content, memory_type, importance,
-                           created_at, last_accessed, access_count, metadata, tags, context, is_active
-                    FROM memory_entries 
-                    WHERE user_id = ? AND is_active = 1 
-                    AND (content LIKE ? OR context LIKE ? OR tags LIKE ?)
-                    ORDER BY importance DESC, last_accessed DESC 
-                    LIMIT ?
-                """, (user_id, search_query, search_query, search_query, limit)) as cursor:
-                    rows = await cursor.fetchall()
-                    
-                    memory_entries = []
-                    for row in rows:
-                        memory_entry = MemoryEntry(
-                            id=row[0],
-                            user_id=row[1],
-                            agent_name=row[2],
-                            content=row[3],
-                            memory_type=row[4],
-                            importance=row[5],
-                            created_at=datetime.fromisoformat(row[6]),
-                            last_accessed=datetime.fromisoformat(row[7]),
-                            access_count=row[8],
-                            metadata=json.loads(row[9]),
-                            tags=json.loads(row[10]),
-                            context=row[11],
-                            is_active=bool(row[12])
-                        )
-                        memory_entries.append(memory_entry)
-                    
-                    return memory_entries
+            context = SessionContext(
+                session_id=session_id,
+                user_id=user_id,
+                agent_history=agent_history or [],
+                user_preferences=user_preferences,
+                system_state=system_state,
+                trace_metadata=trace_metadata
+            )
+            
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute('''
+                    INSERT OR REPLACE INTO session_contexts 
+                    (session_id, user_id, agent_history, user_preferences, system_state, trace_metadata)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    session_id, user_id,
+                    json.dumps(agent_history) if agent_history else None,
+                    json.dumps(user_preferences) if user_preferences else None,
+                    json.dumps(system_state) if system_state else None,
+                    json.dumps(trace_metadata) if trace_metadata else None
+                ))
+                await conn.commit()
+                logger.info(f"Created session context for {session_id}")
+                return context
                 
         except Exception as e:
-            logger.error(f"Failed to search memory: {str(e)}")
-            return []
-    
-    async def update_memory(self, 
-                           memory_id: str, 
-                           content: str = None,
-                           importance: float = None,
-                           metadata: Dict[str, Any] = None,
-                           tags: List[str] = None) -> bool:
-        """
-        Update an existing memory entry
-        
-        Args:
-            memory_id: Memory entry ID
-            content: New content (optional)
-            importance: New importance score (optional)
-            metadata: New metadata (optional)
-            tags: New tags (optional)
-            
-        Returns:
-            bool: Success status
-        """
-        await self.initialize()
-        
-        try:
-            async with aiosqlite.connect(self.db_path) as db:
-                update_parts = []
-                params = []
-                
-                if content is not None:
-                    update_parts.append("content = ?")
-                    params.append(content)
-                    
-                if importance is not None:
-                    update_parts.append("importance = ?")
-                    params.append(importance)
-                    
-                if metadata is not None:
-                    update_parts.append("metadata = ?")
-                    params.append(json.dumps(metadata))
-                    
-                if tags is not None:
-                    update_parts.append("tags = ?")
-                    params.append(json.dumps(tags))
-                
-                if not update_parts:
-                    return False
-                
-                update_parts.append("last_accessed = ?")
-                params.append(datetime.now().isoformat())
-                params.append(memory_id)
-                
-                query = f"UPDATE memory_entries SET {', '.join(update_parts)} WHERE id = ?"
-                
-                await db.execute(query, params)
-                await db.commit()
-                
-                # Update cache
-                if memory_id in self.memory_cache:
-                    cached_entry = self.memory_cache[memory_id]
-                    if content is not None:
-                        cached_entry.content = content
-                    if importance is not None:
-                        cached_entry.importance = importance
-                    if metadata is not None:
-                        cached_entry.metadata = metadata
-                    if tags is not None:
-                        cached_entry.tags = tags
-                    cached_entry.last_accessed = datetime.now()
-                
-                logger.info(f"Updated memory entry: {memory_id}")
-                return True
-            
-        except Exception as e:
-            logger.error(f"Failed to update memory: {str(e)}")
-            return False
-    
-    async def delete_memory(self, memory_id: str) -> bool:
-        """
-        Soft delete a memory entry
-        
-        Args:
-            memory_id: Memory entry ID
-            
-        Returns:
-            bool: Success status
-        """
-        await self.initialize()
-        
-        try:
-            async with aiosqlite.connect(self.db_path) as db:
-                await db.execute("UPDATE memory_entries SET is_active = 0 WHERE id = ?", (memory_id,))
-                await db.commit()
-                
-            # Remove from cache
-            if memory_id in self.memory_cache:
-                del self.memory_cache[memory_id]
-            
-            logger.info(f"Deleted memory entry: {memory_id}")
-            return True
-                
-        except Exception as e:
-            logger.error(f"Failed to delete memory: {str(e)}")
-            return False
-    
-    async def store_session(self, session_id: str, user_id: str, agent_name: str, session: AgentSessionProtocol):
-        """Store an OpenAI Agent SDK session"""
-        await self.initialize()
-        
-        try:
-            # Store session in memory
-            self.active_sessions[session_id] = session
-            
-            # Store minimal session data (opaque)
-            session_data = {"session_id": getattr(session, "session_id", session_id)}
-            
-            async with aiosqlite.connect(self.db_path) as db:
-                await db.execute("""
-                    INSERT OR REPLACE INTO agent_sessions 
-                    (session_id, user_id, agent_name, session_data, created_at, last_accessed, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (session_id, user_id, agent_name, json.dumps(session_data), 
-                     datetime.now().isoformat(), datetime.now().isoformat(), True))
-                await db.commit()
-                
-            logger.info(f"Stored session: {session_id}")
-            
-        except Exception as e:
-            logger.error(f"Failed to store session: {str(e)}")
+            logger.error(f"Failed to create session: {str(e)}")
             raise
     
-    async def get_session(self, session_id: str) -> Optional[AgentSessionProtocol]:
-        """Retrieve an OpenAI Agent SDK session"""
-        await self.initialize()
-        
+    async def get_session_context(self, session_id: str) -> Optional[SessionContext]:
+        """Get session context"""
         try:
-            # Check memory first
-            if session_id in self.active_sessions:
-                return self.active_sessions[session_id]
-            
-            # Check database
-            async with aiosqlite.connect(self.db_path) as db:
-                async with db.execute("""
-                    SELECT session_data FROM agent_sessions 
-                    WHERE session_id = ? AND is_active = 1
-                """, (session_id,)) as cursor:
-                    row = await cursor.fetchone()
-                    
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute('''
+                    SELECT session_id, user_id, created_at, last_activity, agent_history,
+                           conversation_summary, user_preferences, system_state, trace_metadata
+                    FROM session_contexts 
+                    WHERE session_id = ?
+                ''', (session_id,))
+                
+                row = await cursor.fetchone()
                 if row:
-                    _ = json.loads(row[0])
-                    # Return the in-memory instance if present; otherwise, no reconstruction
-                    session = self.active_sessions.get(session_id)
-                    
-                    # Update last accessed
-                    await db.execute("""
-                        UPDATE agent_sessions 
-                        SET last_accessed = ?
-                        WHERE session_id = ?
-                    """, (datetime.now().isoformat(), session_id))
-                    await db.commit()
-                    
-                    # Store in memory
-                    self.active_sessions[session_id] = session
+                    return SessionContext(
+                        session_id=row[0],
+                        user_id=row[1],
+                        created_at=datetime.fromisoformat(row[2]),
+                        last_activity=datetime.fromisoformat(row[3]),
+                        agent_history=json.loads(row[4]) if row[4] else [],
+                        conversation_summary=row[5],
+                        user_preferences=json.loads(row[6]) if row[6] else None,
+                        system_state=json.loads(row[7]) if row[7] else None,
+                        trace_metadata=json.loads(row[8]) if row[8] else None
+                    )
+                return None
                 
-                    return session
-            
-            return None
-            
         except Exception as e:
-            logger.error(f"Failed to get session: {str(e)}")
+            logger.error(f"Failed to get session context: {str(e)}")
             return None
     
-    async def list_sessions(self, user_id: str = None) -> List[Dict[str, Any]]:
-        """List all sessions"""
-        await self.initialize()
-        
+    async def update_session_context(self, session_id: str, agent_history: Optional[List[str]] = None,
+                                   conversation_summary: Optional[str] = None,
+                                   user_preferences: Optional[Dict[str, Any]] = None,
+                                   system_state: Optional[Dict[str, Any]] = None) -> None:
+        """Update session context"""
         try:
-            async with aiosqlite.connect(self.db_path) as db:
-                if user_id:
-                    async with db.execute("""
-                        SELECT session_id, agent_name, session_data, created_at, last_accessed, is_active
-                        FROM agent_sessions 
-                        WHERE user_id = ? AND is_active = 1
-                        ORDER BY last_accessed DESC
-                    """, (user_id,)) as cursor:
-                        rows = await cursor.fetchall()
-                else:
-                    async with db.execute("""
-                    SELECT session_id, agent_name, session_data, created_at, last_accessed, is_active
-                    FROM agent_sessions
-                        WHERE is_active = 1
-                    ORDER BY last_accessed DESC
-                    """) as cursor:
-                        rows = await cursor.fetchall()
-                        
-                        sessions = []
-                        for row in rows:
-                            sessions.append({
-                                'session_id': row[0],
-                                'agent_name': row[1],
-                                'created_at': row[3],
-                                'last_accessed': row[4],
-                                'is_active': bool(row[5])
-                            })
-                        
-                        return sessions
+            async with aiosqlite.connect(self.db_path) as conn:
+                update_fields = []
+                params = []
+                
+                if agent_history is not None:
+                    update_fields.append("agent_history = ?")
+                    params.append(json.dumps(agent_history))
+                
+                if conversation_summary is not None:
+                    update_fields.append("conversation_summary = ?")
+                    params.append(conversation_summary)
+                
+                if user_preferences is not None:
+                    update_fields.append("user_preferences = ?")
+                    params.append(json.dumps(user_preferences))
+                
+                if system_state is not None:
+                    update_fields.append("system_state = ?")
+                    params.append(json.dumps(system_state))
+                
+                if update_fields:
+                    update_fields.append("last_activity = ?")
+                    params.append(datetime.now().isoformat())
+                    params.append(session_id)
+                    
+                    query = f"UPDATE session_contexts SET {', '.join(update_fields)} WHERE session_id = ?"
+                    await conn.execute(query, params)
+                    await conn.commit()
+                    logger.debug(f"Updated session context for {session_id}")
+                    
+        except Exception as e:
+            logger.error(f"Failed to update session context: {str(e)}")
+            raise
+    
+    async def create_sdk_session(self, session_id: str, agent: Any, 
+                               user_id: Optional[str] = None,
+                               trace_metadata: Optional[Dict[str, Any]] = None) -> Session:
+        """Create SDK Session with memory integration"""
+        try:
+            # Create SQLiteSession for automatic conversation history
+            # Note: SQLiteSession doesn't accept agent parameter in constructor
+            session = SQLiteSession(
+                session_id=session_id,
+                db_path=self.db_path
+            )
+            
+            # Store session context
+            await self.create_session(
+                session_id=session_id,
+                user_id=user_id,
+                trace_metadata=trace_metadata
+            )
+            
+            logger.info(f"Created SDK session for {session_id}")
+            return session
+            
+        except Exception as e:
+            logger.error(f"Failed to create SDK session: {str(e)}")
+            raise
+    
+    async def record_agent_performance(self, agent_name: str, session_id: str,
+                                     execution_time: float, success_rate: float,
+                                     tool_calls_count: int = 0, handoffs_count: int = 0) -> None:
+        """Record agent performance metrics"""
+        try:
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute('''
+                    INSERT INTO agent_performance 
+                    (agent_name, session_id, execution_time, success_rate, tool_calls_count, handoffs_count)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (agent_name, session_id, execution_time, success_rate, tool_calls_count, handoffs_count))
+                await conn.commit()
+                logger.debug(f"Recorded performance for {agent_name}")
                 
         except Exception as e:
-            logger.error(f"Failed to list sessions: {str(e)}")
-            return []
+            logger.error(f"Failed to record agent performance: {str(e)}")
     
-    async def delete_session(self, session_id: str) -> bool:
-        """Delete a session"""
-        await self.initialize()
-        
+    async def get_user_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user profile"""
         try:
-            # Remove from memory
-            if session_id in self.active_sessions:
-                del self.active_sessions[session_id]
-            
-            # Remove from database
-            async with aiosqlite.connect(self.db_path) as db:
-                await db.execute("UPDATE agent_sessions SET is_active = 0 WHERE session_id = ?", (session_id,))
-                await db.commit()
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.execute('''
+                    SELECT preferences, behavior_patterns, expertise_areas, communication_style
+                    FROM user_profiles 
+                    WHERE user_id = ?
+                ''', (user_id,))
                 
-            logger.info(f"Deleted session: {session_id}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to delete session: {str(e)}")
-            return False
-    
-    async def _update_access_stats(self, memory_ids: List[str]):
-        """Update access statistics for memory entries"""
-        try:
-            async with aiosqlite.connect(self.db_path) as db:
-                now = datetime.now().isoformat()
-                for memory_id in memory_ids:
-                    await db.execute("""
-                        UPDATE memory_entries 
-                        SET access_count = access_count + 1, last_accessed = ?
-                        WHERE id = ?
-                    """, (now, memory_id))
-                await db.commit()
-            
-        except Exception as e:
-            logger.error(f"Failed to update access stats: {str(e)}")
-    
-    async def cleanup_old_memory(self, days: int = 30):
-        """Clean up old memory entries"""
-        await self.initialize()
-        
-        try:
-            cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
-            
-            async with aiosqlite.connect(self.db_path) as db:
-                await db.execute("""
-                    UPDATE memory_entries 
-                    SET is_active = 0 
-                    WHERE created_at < ? AND importance < 0.3
-                """, (cutoff_date,))
-                await db.commit()
+                row = await cursor.fetchone()
+                if row:
+                    return {
+                        "preferences": json.loads(row[0]) if row[0] else {},
+                        "behavior_patterns": json.loads(row[1]) if row[1] else {},
+                        "expertise_areas": json.loads(row[2]) if row[2] else [],
+                        "communication_style": row[3]
+                    }
+                return None
                 
-            logger.info(f"Cleaned up memory entries older than {days} days")
-            
         except Exception as e:
-            logger.error(f"Failed to cleanup old memory: {str(e)}")
+            logger.error(f"Failed to get user profile: {str(e)}")
+            return None
     
-    async def get_memory_stats(self, user_id: str = None) -> Dict[str, Any]:
-        """Get memory statistics"""
-        await self.initialize()
-        
+    async def update_user_profile(self, user_id: str, preferences: Optional[Dict[str, Any]] = None,
+                                behavior_patterns: Optional[Dict[str, Any]] = None,
+                                expertise_areas: Optional[List[str]] = None,
+                                communication_style: Optional[str] = None) -> None:
+        """Update user profile"""
         try:
-            async with aiosqlite.connect(self.db_path) as db:
-                if user_id:
-                    async with db.execute("""
-                        SELECT COUNT(*) as total,
-                               COUNT(CASE WHEN is_active = 1 THEN 1 END) as active,
-                               AVG(importance) as avg_importance,
-                               MAX(last_accessed) as last_accessed
-                        FROM memory_entries 
-                        WHERE user_id = ?
-                    """, (user_id,)) as cursor:
-                        row = await cursor.fetchone()
-                else:
-                    async with db.execute("""
-                        SELECT COUNT(*) as total,
-                               COUNT(CASE WHEN is_active = 1 THEN 1 END) as active,
-                               AVG(importance) as avg_importance,
-                               MAX(last_accessed) as last_accessed
-                        FROM memory_entries
-                    """) as cursor:
-                        row = await cursor.fetchone()
+            async with aiosqlite.connect(self.db_path) as conn:
+                await conn.execute('''
+                    INSERT OR REPLACE INTO user_profiles 
+                    (user_id, preferences, behavior_patterns, expertise_areas, communication_style, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    user_id,
+                    json.dumps(preferences) if preferences else None,
+                    json.dumps(behavior_patterns) if behavior_patterns else None,
+                    json.dumps(expertise_areas) if expertise_areas else None,
+                    communication_style,
+                    datetime.now().isoformat()
+                ))
+                await conn.commit()
+                logger.debug(f"Updated user profile for {user_id}")
                 
-                return {
-                    'total_entries': row[0],
-                    'active_entries': row[1],
-                    'average_importance': row[2] or 0.0,
-                    'last_accessed': row[3]
-                }
-            
         except Exception as e:
-            logger.error(f"Failed to get memory stats: {str(e)}")
-            return {}
+            logger.error(f"Failed to update user profile: {str(e)}")
+    
+    async def cleanup_old_sessions(self, days: int = 30) -> None:
+        """Clean up old sessions and memory entries"""
+        try:
+            cutoff_date = datetime.now() - timedelta(days=days)
+            
+            async with aiosqlite.connect(self.db_path) as conn:
+                # Clean up old memory entries
+                await conn.execute('''
+                    DELETE FROM memory_entries 
+                    WHERE timestamp < ?
+                ''', (cutoff_date.isoformat(),))
+                
+                # Clean up old session contexts
+                await conn.execute('''
+                    DELETE FROM session_contexts 
+                    WHERE last_activity < ?
+                ''', (cutoff_date.isoformat(),))
+                
+                # Clean up old performance data
+                await conn.execute('''
+                    DELETE FROM agent_performance 
+                    WHERE timestamp < ?
+                ''', (cutoff_date.isoformat(),))
+                
+                await conn.commit()
+                logger.info(f"Cleaned up sessions older than {days} days")
+                
+        except Exception as e:
+            logger.error(f"Failed to cleanup old sessions: {str(e)}")
+
+# Global memory instance
+_memory_instance = None
+
+def get_memory() -> EnhancedSQLiteMemory:
+    """Get global memory instance"""
+    global _memory_instance
+    if _memory_instance is None:
+        _memory_instance = EnhancedSQLiteMemory()
+    return _memory_instance
+
+async def create_enhanced_session(session_id: str, agent: Any, user_id: Optional[str] = None,
+                                trace_metadata: Optional[Dict[str, Any]] = None) -> Session:
+    """Create enhanced SDK session with memory integration"""
+    memory = get_memory()
+    return await memory.create_sdk_session(session_id, agent, user_id, trace_metadata)
